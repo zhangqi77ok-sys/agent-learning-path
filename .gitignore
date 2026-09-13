@@ -7,3 +7,6 @@ __pycache__/
 !.env.example
 traces/*.json
 .DS_Store
+
+lesson14/traces/*.json
+lesson14/eval_report.json

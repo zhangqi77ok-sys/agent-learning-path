@@ -1,0 +1,4 @@
+{"id":"leave-1","question":"带薪年假有几天？怎么申请？","must_include":["10"],"expect_refuse":false}
+{"id":"rag-1","question":"RAG 的典型链路是什么？","must_include":["检索"],"expect_refuse":false}
+{"id":"agent-1","question":"Agent 和普通聊天机器人有什么区别？","must_include":["工具"],"expect_refuse":false}
+{"id":"ood-1","question":"火星员工的年假怎么休？","must_include":[],"expect_refuse":true}
