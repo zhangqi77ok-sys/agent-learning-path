@@ -31,7 +31,8 @@ export $(grep -v '^#' .env | xargs)  # 或按系统自行设置环境变量
 | 9 | `lesson09/` | 混合检索：关键词 + 向量 + RRF |
 | 10 | `lesson10/` | KB_SEARCH 工具化，进入 Agent Loop |
 | 11 | `lesson11/` | 手写状态图：retrieve → generate → END |
-| 后续 | — | 条件边 / Multi-Agent → MCP → 作品包装 |
+| 12 | `lesson12/` | 条件边 + 检索员/回答员 Multi-Agent |
+| 后续 | — | MCP → 评测/Trace 作品化 → 简历包装 |
 
 详细学习手册见 `docs/java-to-agent-learning-handbook.md`（部分口径已按「Python 主作品」更新，以本 README 与各课为准）。
 
