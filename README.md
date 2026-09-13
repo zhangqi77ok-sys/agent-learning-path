@@ -27,7 +27,8 @@ export $(grep -v '^#' .env | xargs)  # 或按系统自行设置环境变量
 | 5 | `lesson05/` | 结束条件：no_tool_calls / finish / return_direct |
 | 6 | `lesson06/` | 迷你 Trace（本地 JSON spans） |
 | 7 | `lesson07/` | RAG 入门：切分 + 检索 + 带引用回答 |
-| 后续 | — | Embedding RAG → LangGraph → MCP → 作品包装 |
+| 8 | `lesson08/` | Embedding 向量检索，对比关键词 RAG |
+| 后续 | — | 混合检索 → LangGraph → MCP → 作品包装 |
 
 详细学习手册见 `docs/java-to-agent-learning-handbook.md`（部分口径已按「Python 主作品」更新，以本 README 与各课为准）。
 
