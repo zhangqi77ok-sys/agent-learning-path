@@ -85,3 +85,9 @@
 3. ~~**Mock Interview R1** 待评分~~ **已通过并合入**（见 `docs/mock-interviews/`）。
 4. ~~**Mock Interview R2** 待评分~~ **已通过**（见 `docs/mock-interviews/round-02-q-and-capstone.md`）。
 5. ~~**Mock Interview R3** 待评分~~ **已通过**。下一步：计时口述 / 简历包装。
+
+## 简历包装
+
+- 文档：`docs/resume-differentials.md`（三条差异化：Java 归属链 / 坏例进 CI / MCP≠A2A）
+- 状态：①②③均已审通过（可投递润色）
+- 下一步：O10 脱稿计时（个人练习，纪要可选入库）
