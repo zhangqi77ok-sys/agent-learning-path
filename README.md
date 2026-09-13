@@ -34,6 +34,13 @@
 - Curriculum v2（stage-01～04）：`docs/curriculum-v2.md`（预修）
 - `lesson00`–`lesson14`：早期练习，不作为主进度
 
+
+## 实战项目
+
+| 项目 | 路径 | 说明 |
+|------|------|------|
+| Hot-pluggable Agent Harness | [`projects/hotplug-harness/`](projects/hotplug-harness/) | 工具/模型/策略插件热加载；Harness 拥有 Loop（Budget / Allowlist / Circuit）；`python demo.py` → `ALL_OK` |
+
 ## 环境
 
 ```bash
