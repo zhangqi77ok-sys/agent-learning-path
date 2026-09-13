@@ -3,17 +3,17 @@
 日期：2026-09-13  
 命令：`python demo.py`
 
+关键断言：
+
 ```text
-=== demo1: O1 crash after external, resume without second call ===
-crashed: injected_crash_after_external
-external_calls_before_resume: 1
-external_calls_total: 1 SLO_ok_idempotent: True
+=== demo1a: crash BEFORE local ref (started, no ref) then resume ===
+unique_tickets: 1  SLO_ok_no_double_effect: True
+=== demo1b: crash AFTER local unknown+ref then resume ===
+unique: 1 calls: 1
 === demo2: dual worker lease ===
-{'status': 'lease_denied', ...}
-SLO_ok_lease: True
-=== demo3: cancel before finalize ===
-{'status': 'cancelled', ...}
-SLO_ok_cancel: True
+lease_denied
+=== demo3: cancel ===
+cancelled
 ```
 
-对照 A2 SLO：重复 resume 外部 mock = 1；lease 互斥；cancel 生效。
+O1 补强：`started` 无 ref 路径用 Idempotency-Key + 对端查询，禁止裸重试。

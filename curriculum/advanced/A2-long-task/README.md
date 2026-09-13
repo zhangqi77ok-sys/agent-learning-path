@@ -20,9 +20,10 @@ python demo.py
 
 ## 故障注入
 
-1. tool/外部调用成功后进程崩溃，再 resume → 外部 mock 仍只调用 1 次  
-2. 双 Worker 抢 lease → 后者 `lease_denied`  
-3. cancel → 状态 `cancelled`
+1. **O1a** 远端已成功、本地仍 `started` 无 ref → resume 先查对端 / 同 Idempotency-Key，不双开票  
+2. **O1b** 本地已有 `unknown+ref` 后崩溃 → resume 只对账  
+3. 双 Worker 抢 lease → 后者 `lease_denied`  
+4. cancel → 状态 `cancelled`
 
 ## 交付清单
 
