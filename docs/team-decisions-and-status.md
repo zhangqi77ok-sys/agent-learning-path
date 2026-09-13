@@ -26,7 +26,7 @@
 |----|------|-------------|
 | B1 调研稿 | **已合 main** | `docs/b1-durable-runtime-research.md` · [PR #16](https://github.com/zhangqi77ok-sys/agent-learning-path/pull/16) |
 | B1-code Temporal | **已合 main** | `curriculum/advanced/B1-durable-runtime/` · [PR #17](https://github.com/zhangqi77ok-sys/agent-learning-path/pull/17) |
-| B2 A2A | 未开 | 身份下行 + 幂等键 + 超时取消 |
+| B2 A2A | **已合 main（本 PR）** | `curriculum/advanced/B2-a2a/` · 身份下行 + 幂等键 + 超时取消 |
 | B3 上下文工程 | 未开 | compaction 保留字段进 Harness |
 
 ### 深挖四条（答「用了 Temporal」会被打回）
@@ -70,4 +70,4 @@
 ## 下一步
 
 1. ~~maxzq / 架构师网页 Merge **#17**。~~ **已合**（2026-09-13）。
-2. Merge 后 @agent学生 开 **B2**（最小 A2A + 负例），结论同样先写 `docs/` 再动代码。
+2. ~~Merge 后 @agent学生 开 **B2**~~ **已交付**（`curriculum/advanced/B2-a2a/`，DESIGN.md + 负例 demo）。
