@@ -14,3 +14,7 @@
 ## 隔离键
 
 每次 `start_run` 绑定 `tenant_id / user_id / thread_id / run_id`，事件账带上这些键，后续才能做租户级 Trace→Eval。
+
+## 全栈控制台为什么有助于面试
+
+打开浏览器就能指着时间线说：Model 只 propose，Budget / Circuit / Policy 是 Harness 画上的事件，不是模型自己停的。控制面可见，比只甩一段 CLI 日志更能证明你懂所有权边界。
