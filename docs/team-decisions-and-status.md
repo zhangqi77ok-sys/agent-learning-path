@@ -26,7 +26,7 @@
 |----|------|-------------|
 | B1 调研稿 | **已合 main** | `docs/b1-durable-runtime-research.md` · [PR #16](https://github.com/zhangqi77ok-sys/agent-learning-path/pull/16) |
 | B1-code Temporal | **已合 main** | `curriculum/advanced/B1-durable-runtime/` · [PR #17](https://github.com/zhangqi77ok-sys/agent-learning-path/pull/17) |
-| B2 A2A | **已合 main（本 PR）** | `curriculum/advanced/B2-a2a/` · 身份下行 + 幂等键 + 超时取消 |
+| B2 A2A | **已合 main** | `curriculum/advanced/B2-a2a/` · [PR #19](https://github.com/zhangqi77ok-sys/agent-learning-path/pull/19) |
 | B3 上下文工程 | 未开 | compaction 保留字段进 Harness |
 
 ### 深挖四条（答「用了 Temporal」会被打回）
@@ -67,7 +67,17 @@
 2. 代码 PR 必须含：跑通证据（RUN）、JD/面试对照一句、故障注入。
 3. GitHub API/Merge 抽风时：分支已推则贴 compare 链接；网页 Merge 后回写本文状态。
 
+## 模拟面试
+
+| 场次 | 文档 | 状态 |
+|------|------|------|
+| R1 | `docs/mock-interviews/round-01-deep-dive-and-java.md` | **通过**（深挖+架构已评分） |
+| 索引 | `docs/mock-interviews/README.md` | 已建 |
+
+约定：提问与解答全文进 GitHub；群聊短同步。
+
 ## 下一步
 
 1. ~~maxzq / 架构师网页 Merge **#17**。~~ **已合**（2026-09-13）。
 2. ~~Merge 后 @agent学生 开 **B2**~~ **已交付**（`curriculum/advanced/B2-a2a/`，DESIGN.md + 负例 demo）。
+3. ~~**Mock Interview R1** 待评分~~ **已通过并合入**（见 `docs/mock-interviews/`）。
