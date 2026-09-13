@@ -42,6 +42,9 @@ cd curriculum/stage-01 && uvicorn app:app --reload --port 8001
 健康检查：`GET http://127.0.0.1:8001/health`  
 对话：`POST http://127.0.0.1:8001/v1/chat` body `{"message":"用一句话解释什么是 AI Agent"}`
 
+
+> 跑通备注：`OPENAI_BASE_URL` 需带 `/v1`；本阶段实测模型名为 `grok-4.6`（不是 `grok4.6`）。
+
 ## 过关题作答
 
 见 [PASS.md](./PASS.md)。
@@ -51,4 +54,4 @@ cd curriculum/stage-01 && uvicorn app:app --reload --port 8001
 - [x] `chat_once.py` / `app.py` 可配置 `base_url`
 - [x] README（无密钥）
 - [x] PASS.md 书面作答
-- [ ] 跑通证据（日志摘录，无 Key）——依赖可用中转站
+- [x] 跑通证据（日志摘录，无 Key）——见 [RUN.md](./RUN.md)
