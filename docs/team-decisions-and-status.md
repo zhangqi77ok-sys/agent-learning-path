@@ -73,6 +73,7 @@
 |------|------|------|
 | R1 | `docs/mock-interviews/round-01-deep-dive-and-java.md` | **通过**（深挖+架构已评分） |
 | 索引 | `docs/mock-interviews/README.md` | 已建 |
+| R2 | `docs/mock-interviews/round-02-q-and-capstone.md` | **通过**（深挖+架构已评分） |
 
 约定：提问与解答全文进 GitHub；群聊短同步。
 
@@ -81,3 +82,4 @@
 1. ~~maxzq / 架构师网页 Merge **#17**。~~ **已合**（2026-09-13）。
 2. ~~Merge 后 @agent学生 开 **B2**~~ **已交付**（`curriculum/advanced/B2-a2a/`，DESIGN.md + 负例 demo）。
 3. ~~**Mock Interview R1** 待评分~~ **已通过并合入**（见 `docs/mock-interviews/`）。
+4. ~~**Mock Interview R2** 待评分~~ **已通过**（见 `docs/mock-interviews/round-02-q-and-capstone.md`）。
