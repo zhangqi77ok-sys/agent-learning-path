@@ -89,5 +89,6 @@
 ## 简历包装
 
 - 文档：`docs/resume-differentials.md`（三条差异化：Java 归属链 / 坏例进 CI / MCP≠A2A）
-- 状态：①②③均已审通过（可投递润色）
+- 扩展条目：`docs/resume-bullets-extended.md`（A1–A8 / B1–B2 共 12 条）· [PR #27](https://github.com/zhangqi77ok-sys/agent-learning-path/pull/27) **已合 main**（架构侧 4/10/12 + 深挖侧 1/2/6/7/8/11 均通过）
+- 状态：差异化三条 + 扩展十二条审稿完成（可投递润色）
 - 下一步：O10 脱稿计时（个人练习，纪要可选入库）
