@@ -91,4 +91,5 @@
 - 文档：`docs/resume-differentials.md`（三条差异化：Java 归属链 / 坏例进 CI / MCP≠A2A）
 - 扩展条目：`docs/resume-bullets-extended.md`（A1–A8 / B1–B2 共 12 条）· [PR #27](https://github.com/zhangqi77ok-sys/agent-learning-path/pull/27) **已合 main**（架构侧 4/10/12 + 深挖侧 1/2/6/7/8/11 均通过）
 - 状态：差异化三条 + 扩展十二条审稿完成（可投递润色）
-- 下一步：O10 脱稿计时（个人练习，纪要可选入库）
+- 练习包：`docs/mock-interviews/timed-practice-pack-o10-g1.md` · [PR #29](https://github.com/zhangqi77ok-sys/agent-learning-path/pull/29) **已合**（O10 ②⑦不可砍；G1 骨架/归属/SPOF/SLO 不可砍）
+- 下一步：按练习包脱稿掐表（纪要可存 `timed-log-YYYYMMDD.md`）
