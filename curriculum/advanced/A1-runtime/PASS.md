@@ -14,5 +14,5 @@ while 循环只有「再问一次模型」。Harness 控制面要管：
 
 ## Q11. 死循环怎么在烧钱前停？
 
-本课演示：相同 tool signature 连续 ≥3 次 → `circuit_open`；另有 max_steps / max_wall_ms / max_tool_calls。  
+本课演示：相同 signature 已执行 3 次后，下一次拒绝并 `circuit_open`；另有 max_steps / max_wall_ms / max_tool_calls。  
 SLO：≤8 step 或 ≤30s 进入熔断；预算耗尽后不再产生新 tool span。
