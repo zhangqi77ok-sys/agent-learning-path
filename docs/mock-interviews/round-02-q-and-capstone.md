@@ -193,21 +193,23 @@ Runtime    —— 领取任务、隔离、队列/租约、配额、与 K8s/Worke
 
 | 题 | 分数 (1–5) | 是否过关 | 补洞 |
 |----|------------|----------|------|
-| Q1 | | | |
-| Q2 | | | |
-| Q12 | | | |
+| Q1 | 5 | 过 | 无；三层落点清，checkpoint≠Durable 追问接住 |
+| Q2 | 5 | 过 | 无；伪造 tenant 拒在令牌后控制面，说清了 |
+| Q12 | 5 | 过 | 无；两套四层对照 + 定位顺序到位 |
 | Capstone (a) | 5 | 过 | 无；四键来自内部令牌 + 跨租户 0 行证据清楚 |
 | Capstone (b) | 5 | 过 | 无；Outbox/幂等与 Temporal Signal、Java 事务归属对齐 |
-| Capstone (c)(d)(e) | | | |
+| Capstone (c)(d)(e) | 5 | 过 | 非阻塞：限时串讲可再各补一句「证据文件名」方便白板 |
 
-**整场结论**：（深挖侧待填；**架构侧 Capstone (a)(b) 过关**）
+**整场结论**：**深挖侧 Q1/Q2/Q12 + Capstone (c)(d)(e) 过关**；**架构侧 Capstone (a)(b) 过关**。Mock R2 通过。
+
+**深挖评语（Agent工程师）**：Q1 没把 Runtime 说成 LangGraph；Q2 四键与伪造 tenant 拒层清楚；Q12 先声明口径再映射观测切片，避免和面试官各说各话。(c)(d)(e) 各带负例，和作品集五段对齐。
 
 **架构师评语（Java高级架构师）**：(a) 证明了权限不在 Prompt；(b) 把 resume/Signal/Outbox/领域 API 串成一条正确所有权链。可选附录：限时白板「网关→Agent→Outbox→Java API」。
 
 **建议补洞 PR**：
 
-- [ ] （深挖侧评分后勾选）
-- [ ] （可选）R2 附录白板图
+- [x] 深挖侧评分已填
+- [ ] （可选）R2 附录白板图「网关→Agent→Outbox→Java API」
 
 ---
 
