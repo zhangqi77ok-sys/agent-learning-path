@@ -50,9 +50,11 @@ python demo.py          # 末尾应出现 ALL_OK
 python -m pytest -q
 ```
 
-### 全栈控制台（浏览器看控制面）
+### 全栈 Q&A 控制台（聊天驱动 Run）
 
-两个终端。不需要 LLM API Key。
+主 UX 是 **聊天 / 问答**：学生像真实助手一样提问，一次消息驱动一次 Harness Run；右侧面板展示 status、隔离键、事件时间线、工具调用次数。场景示例芯片只**填充输入框**，仍以聊天消息提交。不需要 LLM API Key。
+
+两个终端。
 
 **终端 1 · 后端 FastAPI（端口 8000）**
 
@@ -62,12 +64,14 @@ pip install -r backend/requirements.txt
 python -m uvicorn backend.app:app --reload --host 127.0.0.1 --port 8000
 ```
 
-冒烟：
+冒烟（Q&A）：
 
 ```bash
 curl -s http://127.0.0.1:8000/api/health
 curl -s http://127.0.0.1:8000/api/plugins
-curl -s -X POST http://127.0.0.1:8000/api/demos/happy
+curl -s -X POST http://127.0.0.1:8000/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"请用一句话解释什么是 Agent Harness？"}'
 ```
 
 **终端 2 · 前端 Vite + React（端口 5173）**
@@ -87,14 +91,16 @@ cd projects/hotplug-harness/frontend
 npm install && npm run build
 ```
 
-### 演示按钮证明什么
+### 消息关键词 → 教学路径
 
-| 按钮 | 模型插件 | 期望 status | 证明 |
+| 关键词（消息里出现） | 模型插件 | 期望 status | 证明 |
 |------|----------|-------------|------|
-| Happy | `scripted_happy` | `succeeded` | Model 只 propose echo×2，Harness 跑完收工 |
-| Circuit | `infinite_same_tool` | `circuit_open` | 相同 tool signature 连打，Harness 熔断，不是模型自己停 |
-| Budget | `unique_infinite` | `budget_exceeded` | 每次不同 signature，打满步数由 Budget 停 |
-| Policy | `forbidden_tool` | `policy_blocked` | allowlist 拦 `drop_db`，工具从未执行 |
+| （默认 / 普通问题） | `scripted_happy` | `succeeded` | echo 一次用户问题后给出含问题原文的回复 |
+| `死循环` / `熔断` | `infinite_same_tool` | `circuit_open` | 相同 tool signature 连打，Harness 熔断 |
+| `预算` / `超步` | `unique_infinite` | `budget_exceeded` | 每次不同 signature，Budget 停跑 |
+| `越权` / `forbidden` | `forbidden_tool` | `policy_blocked` | allowlist 拦 `drop_db` |
+
+也可显式传 `model_name` 覆盖路由；旧 `POST /api/demos/{name}` 仍可用。`POST /api/runs` 现支持可选 `message` 字段。
 
 「重新扫描插件」= `POST /api/plugins/reload`，重新扫 `plugins/` 目录。
 

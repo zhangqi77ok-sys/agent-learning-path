@@ -65,6 +65,7 @@ class RunState:
     cancel_requested: bool = False
     final: str = ""
     last_tool_results: list[str] = field(default_factory=list)
+    user_message: str = ""  # optional Q&A input from chat /api/chat
 
     @property
     def tenant_id(self) -> str:

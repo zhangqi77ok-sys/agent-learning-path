@@ -1,6 +1,6 @@
 """FastAPI control plane — wraps hotplug_harness, does not replace it.
 
-Students can hit these endpoints (or the Vite console) and see:
+Students can chat (Q&A) or hit demo endpoints and see:
   Model proposes → Harness owns loop / budget / circuit / policy.
 No real LLM keys; scripted model plugins only.
 """
@@ -21,7 +21,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from hotplug_harness import Budget, CircuitBreaker, Harness, load_default  # noqa: E402
-from hotplug_harness.contracts import RunState  # noqa: E402
+from hotplug_harness.contracts import RunState, RunStatus  # noqa: E402
 
 MAX_STORED_RUNS = 50
 
@@ -76,12 +76,50 @@ DEMOS: dict[str, dict[str, Any]] = {
     },
 }
 
+# Sample questions for the console chips (fill input only).
+SAMPLE_CHIPS: list[dict[str, str]] = [
+    {
+        "id": "happy",
+        "label": "正常问答",
+        "fill": "请用一句话解释什么是 Agent Harness？",
+    },
+    {
+        "id": "circuit",
+        "label": "触发熔断",
+        "fill": "请演示死循环熔断：模型不停调用同一工具",
+    },
+    {
+        "id": "budget",
+        "label": "超预算",
+        "fill": "请演示超步数预算耗尽：每次不同工具签名一直跑",
+    },
+    {
+        "id": "policy",
+        "label": "越权工具",
+        "fill": "请尝试越权调用 forbidden 的 drop_db 工具",
+    },
+]
+
 
 class RunRequest(BaseModel):
     tenant_id: str = "t1"
     user_id: str = "u1"
     thread_id: str = "th-manual"
     model_name: str
+    message: str | None = None
+    max_steps: int | None = None
+    max_wall_ms: int | None = None
+    max_tool_calls: int | None = None
+    circuit_limit: int | None = None
+    policy_names: list[str] | None = None
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(..., min_length=1)
+    tenant_id: str = "t1"
+    user_id: str = "u1"
+    thread_id: str = "th-chat"
+    model_name: str | None = None
     max_steps: int | None = None
     max_wall_ms: int | None = None
     max_tool_calls: int | None = None
@@ -94,7 +132,88 @@ def _fresh_registry():
     return load_default(ROOT)
 
 
-def serialize_run(state: RunState, *, model_name: str, extra: dict[str, Any] | None = None) -> dict[str, Any]:
+def _route_from_message(message: str) -> dict[str, Any]:
+    """Keyword → scripted model + budget/circuit knobs (teaching paths)."""
+    text = message
+    lower = message.lower()
+
+    if any(k in text for k in ("死循环", "熔断")) or "circuit" in lower:
+        return {
+            "route": "circuit",
+            "model_name": "infinite_same_tool",
+            "max_steps": 8,
+            "max_wall_ms": 30_000,
+            "max_tool_calls": 100,
+            "circuit_limit": 3,
+            "thread_hint": "th-chat-circuit",
+        }
+    if any(k in text for k in ("预算", "超步")) or "budget" in lower:
+        return {
+            "route": "budget",
+            "model_name": "unique_infinite",
+            "max_steps": 5,
+            "max_wall_ms": 30_000,
+            "max_tool_calls": 100,
+            "circuit_limit": 3,
+            "thread_hint": "th-chat-budget",
+        }
+    if any(k in text for k in ("越权",)) or "forbidden" in lower:
+        return {
+            "route": "policy",
+            "model_name": "forbidden_tool",
+            "max_steps": 8,
+            "max_wall_ms": 30_000,
+            "max_tool_calls": 16,
+            "circuit_limit": 3,
+            "thread_hint": "th-chat-policy",
+        }
+    return {
+        "route": "happy",
+        "model_name": "scripted_happy",
+        "max_steps": 8,
+        "max_wall_ms": 30_000,
+        "max_tool_calls": 16,
+        "circuit_limit": 3,
+        "thread_hint": "th-chat-happy",
+    }
+
+
+def _assistant_reply(state: RunState, message: str) -> str:
+    """Human-readable assistant bubble text for the chat UI."""
+    status = state.status
+    if status == RunStatus.SUCCEEDED:
+        return state.final or "（模型未返回最终文本）"
+    if status == RunStatus.CIRCUIT_OPEN:
+        return (
+            f"Harness 已熔断（circuit_open）：检测到重复工具签名。"
+            f"你的问题是「{message}」。"
+            f"控制面拦住了死循环，不是模型自己停的。"
+        )
+    if status == RunStatus.BUDGET_EXCEEDED:
+        return (
+            f"Harness 预算耗尽（budget_exceeded）：步数/工具调用超限。"
+            f"你的问题是「{message}」。"
+            f"Budget 强制停跑。"
+        )
+    if status == RunStatus.POLICY_BLOCKED:
+        return (
+            f"Harness 策略拦截（policy_blocked）：{state.final or 'denied'}。"
+            f"你的问题是「{message}」。"
+            f"越权工具从未执行。"
+        )
+    if status == RunStatus.CANCELLED:
+        return f"运行已取消。问题：「{message}」。"
+    if status == RunStatus.FAILED:
+        return f"运行失败：{state.final or status.value}。问题：「{message}」。"
+    return f"status={status.value} final={state.final!r}"
+
+
+def serialize_run(
+    state: RunState,
+    *,
+    model_name: str,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "run_id": state.run_id,
         "status": state.status.value,
@@ -103,6 +222,7 @@ def serialize_run(state: RunState, *, model_name: str, extra: dict[str, Any] | N
         "tool_calls": state.tool_calls,
         "model_name": model_name,
         "cancel_requested": state.cancel_requested,
+        "user_message": state.user_message,
         "isolation": {
             "tenant_id": state.tenant_id,
             "user_id": state.user_id,
@@ -142,7 +262,7 @@ class AppState:
 
 store = AppState()
 
-app = FastAPI(title="Hot-pluggable Harness Console API", version="0.1.0")
+app = FastAPI(title="Hot-pluggable Harness Console API", version="0.2.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -163,6 +283,7 @@ def health() -> dict[str, Any]:
     return {
         "ok": True,
         "service": "hotplug-harness",
+        "mode": "chat-qa",
         "plugins": store.registry.summary(),
         "stored_runs": len(store.runs),
     }
@@ -202,6 +323,12 @@ def list_demos() -> dict[str, Any]:
     }
 
 
+@app.get("/api/samples")
+def list_samples() -> list[dict[str, str]]:
+    """Chips that only fill the chat input — still submitted as messages."""
+    return SAMPLE_CHIPS
+
+
 def _execute_run(
     *,
     tenant_id: str,
@@ -214,6 +341,8 @@ def _execute_run(
     circuit_limit: int | None = None,
     policy_names: list[str] | None = None,
     demo: str | None = None,
+    user_message: str = "",
+    route: str | None = None,
 ) -> dict[str, Any]:
     # Fresh registry per run: scripted models (e.g. remaining_echoes) must reset.
     registry = _fresh_registry()
@@ -236,13 +365,21 @@ def _execute_run(
         circuit=circuit,
         policy_names=names,
     )
-    state = harness.start_run(tenant_id=tenant_id, user_id=user_id, thread_id=thread_id)
+    state = harness.start_run(
+        tenant_id=tenant_id,
+        user_id=user_id,
+        thread_id=thread_id,
+        user_message=user_message,
+    )
     harness.run_until_done(state)
+    reply = _assistant_reply(state, user_message) if user_message else (state.final or "")
     payload = serialize_run(
         state,
         model_name=model_name,
         extra={
             "demo": demo,
+            "route": route,
+            "reply": reply,
             "budget": {
                 "max_steps": budget.max_steps,
                 "max_wall_ms": budget.max_wall_ms,
@@ -268,6 +405,44 @@ def start_run(body: RunRequest) -> dict[str, Any]:
         max_tool_calls=body.max_tool_calls,
         circuit_limit=body.circuit_limit,
         policy_names=body.policy_names,
+        user_message=body.message or "",
+    )
+
+
+@app.post("/api/chat")
+def chat(body: ChatRequest) -> dict[str, Any]:
+    """Q&A entry: message drives model selection + harness run."""
+    message = body.message.strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="message is required")
+
+    routed = _route_from_message(message)
+    model_name = body.model_name or routed["model_name"]
+    max_steps = body.max_steps if body.max_steps is not None else routed["max_steps"]
+    max_wall_ms = body.max_wall_ms if body.max_wall_ms is not None else routed["max_wall_ms"]
+    max_tool_calls = (
+        body.max_tool_calls if body.max_tool_calls is not None else routed["max_tool_calls"]
+    )
+    circuit_limit = (
+        body.circuit_limit if body.circuit_limit is not None else routed["circuit_limit"]
+    )
+    thread_id = body.thread_id
+    # If client left the default chat thread, use a route-specific hint for teaching.
+    if thread_id == "th-chat":
+        thread_id = routed["thread_hint"]
+
+    return _execute_run(
+        tenant_id=body.tenant_id,
+        user_id=body.user_id,
+        thread_id=thread_id,
+        model_name=model_name,
+        max_steps=max_steps,
+        max_wall_ms=max_wall_ms,
+        max_tool_calls=max_tool_calls,
+        circuit_limit=circuit_limit,
+        policy_names=body.policy_names,
+        user_message=message,
+        route=routed["route"],
     )
 
 
@@ -318,6 +493,7 @@ def run_demo(name: str) -> dict[str, Any]:
         max_tool_calls=spec["max_tool_calls"],
         circuit_limit=spec["circuit_limit"],
         demo=name,
+        route=name,
     )
 
 

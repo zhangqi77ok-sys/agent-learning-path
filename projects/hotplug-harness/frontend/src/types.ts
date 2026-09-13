@@ -29,6 +29,9 @@ export type RunRecord = {
   isolation: IsolationKeys;
   events: StepEvent[];
   demo?: string | null;
+  route?: string | null;
+  reply?: string;
+  user_message?: string;
   budget?: {
     max_steps: number;
     max_wall_ms: number;
@@ -43,4 +46,17 @@ export type DemoInfo = {
   label: string;
   proves: string;
   model_name: string;
+};
+
+export type SampleChip = {
+  id: string;
+  label: string;
+  fill: string;
+};
+
+export type ChatMessage = {
+  id: string;
+  role: "user" | "assistant" | "system";
+  text: string;
+  run?: RunRecord;
 };

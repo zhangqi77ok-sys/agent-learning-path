@@ -17,6 +17,7 @@ class UniqueInfiniteModel:
     name: str = "unique_infinite"
 
     def propose(self, state: Any):
+        # Unique signature per step → budget, not circuit.
         return None, [_tool_call("echo", {"message": f"n-{state.step}"})]
 
 
