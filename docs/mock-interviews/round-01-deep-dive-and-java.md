@@ -315,5 +315,5 @@ MQ：网关/控制面发命令，Worker 消费；Agent **不**直连业务库开
 
 - [x] 每题都落到仓库路径
 - [x] 区分 MCP / A2A / Temporal / Java 事务
-- [ ] 限时口述 90 秒版（R1.1 follow-up 另开文档）
+- [x] 限时口述 90 秒版（见附录 B）
 - [ ] 真 kill Worker 续跑录像/日志（B1 follow-up）
