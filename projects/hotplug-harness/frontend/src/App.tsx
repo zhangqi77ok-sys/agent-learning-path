@@ -1,6 +1,6 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { api } from "./api";
-import type { DemoInfo, PluginSummary, RunRecord } from "./types";
+import type { ChatMessage, PluginSummary, RunRecord, SampleChip } from "./types";
 
 const STATUS_LABEL: Record<string, string> = {
   running: "运行中",
@@ -21,7 +21,12 @@ const KIND_LABEL: Record<string, string> = {
   cancel: "取消",
 };
 
-const DEMO_ORDER = ["happy", "circuit", "budget", "policy"] as const;
+const DEFAULT_SAMPLES: SampleChip[] = [
+  { id: "happy", label: "正常问答", fill: "请用一句话解释什么是 Agent Harness？" },
+  { id: "circuit", label: "触发熔断", fill: "请演示死循环熔断：模型不停调用同一工具" },
+  { id: "budget", label: "超预算", fill: "请演示超步数预算耗尽：每次不同工具签名一直跑" },
+  { id: "policy", label: "越权工具", fill: "请尝试越权调用 forbidden 的 drop_db 工具" },
+];
 
 function Badge({ status }: { status: string }) {
   return (
@@ -32,38 +37,9 @@ function Badge({ status }: { status: string }) {
   );
 }
 
-function PluginColumn({ plugins }: { plugins: PluginSummary | null }) {
-  if (!plugins) {
-    return <p className="muted">尚未连上后端…</p>;
-  }
-  const groups: { title: string; items: string[]; hint: string }[] = [
-    { title: "Tools", items: plugins.tools, hint: "plugins/tools/" },
-    { title: "Models", items: plugins.models, hint: "plugins/models/" },
-    { title: "Policies", items: plugins.policies, hint: "plugins/policies/" },
-  ];
-  return (
-    <>
-      {groups.map((g) => (
-        <div key={g.title} className="plugin-group">
-          <h3>
-            {g.title} <span className="hint">{g.hint}</span>
-          </h3>
-          <ul>
-            {g.items.map((name) => (
-              <li key={name}>
-                <code>{name}</code>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </>
-  );
-}
-
 function Timeline({ run }: { run: RunRecord | null }) {
   if (!run) {
-    return <p className="muted">先发起一次 Run，或点演示按钮。时间线会显示每一步 kind。</p>;
+    return <p className="muted">发一条消息后，这里会显示本次 Run 的事件时间线。</p>;
   }
   return (
     <>
@@ -74,8 +50,8 @@ function Timeline({ run }: { run: RunRecord | null }) {
           <code>{run.run_id.slice(0, 8)}</code>
           <span>model</span>
           <code>{run.model_name}</code>
-          <span>final</span>
-          <code>{run.final || "—"}</code>
+          <span>route</span>
+          <code>{run.route ?? "—"}</code>
           <span>steps / tools</span>
           <code>
             {run.step} / {run.tool_calls}
@@ -84,6 +60,14 @@ function Timeline({ run }: { run: RunRecord | null }) {
           <code>
             {run.isolation.tenant_id} / {run.isolation.user_id} / {run.isolation.thread_id}
           </code>
+          <span>budget</span>
+          <code>
+            {run.budget
+              ? `steps≤${run.budget.max_steps} tools≤${run.budget.max_tool_calls}`
+              : "—"}
+          </code>
+          <span>circuit</span>
+          <code>{run.circuit_limit ?? "—"}</code>
         </div>
       </div>
       <table className="timeline">
@@ -112,20 +96,45 @@ function Timeline({ run }: { run: RunRecord | null }) {
   );
 }
 
+function PluginStrip({ plugins }: { plugins: PluginSummary | null }) {
+  if (!plugins) return <span className="muted">插件未加载</span>;
+  return (
+    <div className="plugin-strip">
+      <span>
+        Tools <code>{plugins.tools.join(", ") || "—"}</code>
+      </span>
+      <span>
+        Models <code>{plugins.models.join(", ") || "—"}</code>
+      </span>
+      <span>
+        Policies <code>{plugins.policies.join(", ") || "—"}</code>
+      </span>
+    </div>
+  );
+}
+
+let msgSeq = 0;
+function nextId(prefix: string) {
+  msgSeq += 1;
+  return `${prefix}-${msgSeq}-${Date.now()}`;
+}
+
 export default function App() {
   const [plugins, setPlugins] = useState<PluginSummary | null>(null);
-  const [demos, setDemos] = useState<Record<string, DemoInfo>>({});
-  const [recent, setRecent] = useState<RunRecord[]>([]);
-  const [selected, setSelected] = useState<RunRecord | null>(null);
-  const [error, setError] = useState<string>("");
+  const [samples, setSamples] = useState<SampleChip[]>(DEFAULT_SAMPLES);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: "welcome",
+      role: "system",
+      text: "像真实助手一样提问。关键词会触发教学路径：死循环/熔断 → 熔断；预算/超步 → 预算；越权/forbidden → 策略拦截。旁侧面板展示 Harness 控制面。",
+    },
+  ]);
+  const [latestRun, setLatestRun] = useState<RunRecord | null>(null);
+  const [input, setInput] = useState("");
+  const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [apiUp, setApiUp] = useState<boolean | null>(null);
-
-  const [tenantId, setTenantId] = useState("t1");
-  const [userId, setUserId] = useState("u1");
-  const [threadId, setThreadId] = useState("th-manual");
-  const [modelName, setModelName] = useState("scripted_happy");
-  const [maxSteps, setMaxSteps] = useState(8);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -134,13 +143,10 @@ export default function App() {
         await api.health();
         if (cancelled) return;
         setApiUp(true);
-        const [p, d, runs] = await Promise.all([api.plugins(), api.demos(), api.runs()]);
+        const [p, chips] = await Promise.all([api.plugins(), api.samples().catch(() => DEFAULT_SAMPLES)]);
         if (cancelled) return;
         setPlugins(p);
-        setDemos(d);
-        setRecent(runs);
-        if (runs[0]) setSelected(runs[0]);
-        if (p.models.length) setModelName((cur) => (p.models.includes(cur) ? cur : p.models[0]));
+        if (chips?.length) setSamples(chips);
       } catch (err) {
         if (cancelled) return;
         setApiUp(false);
@@ -151,6 +157,11 @@ export default function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages, busy]);
 
   async function onReload() {
     setBusy(true);
@@ -165,51 +176,64 @@ export default function App() {
     }
   }
 
-  function remember(run: RunRecord) {
-    setSelected(run);
-    setRecent((prev) => [run, ...prev.filter((r) => r.run_id !== run.run_id)].slice(0, 20));
-  }
+  async function sendMessage(raw: string) {
+    const text = raw.trim();
+    if (!text || busy) return;
 
-  async function submitRun(e: FormEvent) {
-    e.preventDefault();
     setBusy(true);
     setError("");
+    setInput("");
+
+    const userMsg: ChatMessage = { id: nextId("u"), role: "user", text };
+    setMessages((prev) => [...prev, userMsg]);
+
     try {
-      const run = await api.startRun({
-        tenant_id: tenantId,
-        user_id: userId,
-        thread_id: threadId,
-        model_name: modelName,
-        max_steps: maxSteps,
+      const run = await api.chat({
+        message: text,
+        tenant_id: "t1",
+        user_id: "u1",
+        thread_id: "th-chat",
       });
-      remember(run);
+      setLatestRun(run);
+      const reply =
+        run.reply ||
+        run.final ||
+        `（无回复文本，status=${run.status}）`;
+      const assistantMsg: ChatMessage = {
+        id: nextId("a"),
+        role: "assistant",
+        text: reply,
+        run,
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
+      setMessages((prev) => [
+        ...prev,
+        { id: nextId("e"), role: "system", text: `请求失败：${msg}` },
+      ]);
     } finally {
       setBusy(false);
     }
   }
 
-  async function fireDemo(name: string) {
-    setBusy(true);
-    setError("");
-    try {
-      const run = await api.demo(name);
-      remember(run);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
+  function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    void sendMessage(input);
+  }
+
+  function fillChip(chip: SampleChip) {
+    setInput(chip.fill);
   }
 
   return (
     <div className="page">
       <header className="header">
         <div>
-          <h1>热插拔 Agent Harness 控制台</h1>
+          <h1>热插拔 Agent Harness · Q&A 控制台</h1>
           <p className="sub">
-            后端 FastAPI :8000 · 前端 Vite :5173 · 无 LLM Key · 脚本模型插件
+            聊天驱动 Run · 后端 FastAPI :8000 · 前端 Vite :5173 · 无 LLM Key · 脚本模型插件
           </p>
         </div>
         <div className="header-actions">
@@ -223,109 +247,83 @@ export default function App() {
       </header>
 
       <div className="explainer">
-        Model 只 propose；Harness 管 Budget / Circuit / Policy
+        <span className="pill">Model propose</span>
+        <span className="arrow">→</span>
+        <span className="pill">Harness enforce（Budget / Circuit / Policy）</span>
       </div>
 
       {error ? <div className="error">错误：{error}</div> : null}
 
-      <main className="grid">
-        <section className="card">
-          <h2>已加载插件</h2>
-          <p className="hint">从磁盘 `plugins/` 热加载，不改核心循环。</p>
-          <PluginColumn plugins={plugins} />
-        </section>
+      <main className="chat-layout">
+        <section className="card chat-panel">
+          <h2>对话</h2>
+          <p className="hint">像真实助手一样提问；场景示例只填充输入框，仍以聊天消息提交。</p>
 
-        <section className="card">
-          <h2>发起一次 Run</h2>
-          <form className="form" onSubmit={(e) => void submitRun(e)}>
-            <label>
-              tenant_id
-              <input value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
-            </label>
-            <label>
-              user_id
-              <input value={userId} onChange={(e) => setUserId(e.target.value)} />
-            </label>
-            <label>
-              thread_id
-              <input value={threadId} onChange={(e) => setThreadId(e.target.value)} />
-            </label>
-            <label>
-              model
-              <select value={modelName} onChange={(e) => setModelName(e.target.value)}>
-                {(plugins?.models ?? [modelName]).map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              max_steps
-              <input
-                type="number"
-                min={1}
-                max={32}
-                value={maxSteps}
-                onChange={(e) => setMaxSteps(Number(e.target.value) || 8)}
-              />
-            </label>
-            <button type="submit" disabled={busy || !apiUp}>
-              开始运行
-            </button>
-          </form>
-
-          <h3 className="demos-title">演示场景</h3>
-          <div className="demos">
-            {DEMO_ORDER.map((name) => {
-              const info = demos[name];
-              return (
-                <button
-                  key={name}
-                  type="button"
-                  className={`demo demo-${name}`}
-                  disabled={busy || !apiUp}
-                  title={info?.proves}
-                  onClick={() => void fireDemo(name)}
-                >
-                  <strong>{info?.label ?? name}</strong>
-                  <span>{info?.proves ?? name}</span>
-                </button>
-              );
-            })}
+          <div className="chips" aria-label="场景示例">
+            <span className="chips-label">场景示例</span>
+            {samples.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={`chip chip-${c.id}`}
+                disabled={busy || !apiUp}
+                title={c.fill}
+                onClick={() => fillChip(c)}
+              >
+                {c.label}
+              </button>
+            ))}
           </div>
 
-          <h3 className="demos-title">最近 Runs</h3>
-          {recent.length === 0 ? (
-            <p className="muted">还没有 run。</p>
-          ) : (
-            <ul className="recent">
-              {recent.map((r) => (
-                <li key={r.run_id}>
-                  <button
-                    type="button"
-                    className={selected?.run_id === r.run_id ? "active" : ""}
-                    onClick={() => setSelected(r)}
-                  >
-                    <Badge status={r.status} />
-                    <code>{r.model_name}</code>
-                    <span>{r.run_id.slice(0, 8)}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <div className="messages" ref={listRef}>
+            {messages.map((m) => (
+              <div key={m.id} className={`bubble bubble-${m.role}`}>
+                <div className="bubble-role">
+                  {m.role === "user" ? "你" : m.role === "assistant" ? "助手" : "系统"}
+                  {m.run ? (
+                    <span className="bubble-meta">
+                      <Badge status={m.run.status} />
+                      <code>{m.run.model_name}</code>
+                    </span>
+                  ) : null}
+                </div>
+                <div className="bubble-text">{m.text}</div>
+              </div>
+            ))}
+            {busy ? (
+              <div className="bubble bubble-system">
+                <div className="bubble-text">Harness 运行中…</div>
+              </div>
+            ) : null}
+          </div>
+
+          <form className="composer" onSubmit={onSubmit}>
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="问点什么…"
+              disabled={busy || !apiUp}
+              aria-label="消息输入"
+            />
+            <button type="submit" disabled={busy || !apiUp || !input.trim()}>
+              发送
+            </button>
+          </form>
         </section>
 
-        <section className="card">
-          <h2>事件时间线</h2>
-          <p className="hint">每一步由 Harness 记账：model / tool / policy / circuit / budget。</p>
-          <Timeline run={selected} />
+        <section className="card side-panel">
+          <h2>本次 Run · 控制面</h2>
+          <p className="hint">状态、隔离键、事件时间线、工具调用次数 —— 证明 Harness 拥有 Loop。</p>
+          <Timeline run={latestRun} />
         </section>
       </main>
 
       <footer>
-        加工具 = 往 plugins/tools/ 丢一个文件，然后点「重新扫描插件」。核心 harness.py 零 diff。
+        <PluginStrip plugins={plugins} />
+        <p>
+          加工具 = 往 plugins/tools/ 丢一个文件，然后点「重新扫描插件」。核心 harness.py 零
+          diff。旧演示按钮已改为输入芯片；也可用 <code>POST /api/demos/&#123;name&#125;</code>。
+        </p>
       </footer>
     </div>
   );

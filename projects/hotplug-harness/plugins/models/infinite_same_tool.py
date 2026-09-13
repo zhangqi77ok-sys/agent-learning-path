@@ -19,6 +19,7 @@ class InfiniteSameToolModel:
     args: dict = field(default_factory=lambda: {"message": "loop"})
 
     def propose(self, state: Any):
+        # Ignore user_message content — intentional infinite same signature.
         return None, [_tool_call(self.tool_name, dict(self.args))]
 
 

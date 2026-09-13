@@ -39,6 +39,7 @@ class Harness:
         user_id: str,
         thread_id: str,
         run_id: str | None = None,
+        user_message: str = "",
     ) -> RunState:
         keys = IsolationKeys(
             tenant_id=tenant_id,
@@ -46,7 +47,7 @@ class Harness:
             thread_id=thread_id,
             run_id=run_id or str(uuid.uuid4()),
         )
-        return RunState(isolation=keys)
+        return RunState(isolation=keys, user_message=user_message or "")
 
     def cancel(self, state: RunState) -> None:
         state.cancel_requested = True
