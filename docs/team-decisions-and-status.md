@@ -92,4 +92,5 @@
 - 扩展条目：`docs/resume-bullets-extended.md`（A1–A8 / B1–B2 共 12 条）· [PR #27](https://github.com/zhangqi77ok-sys/agent-learning-path/pull/27) **已合 main**（架构侧 4/10/12 + 深挖侧 1/2/6/7/8/11 均通过）
 - 状态：差异化三条 + 扩展十二条审稿完成（可投递润色）
 - 练习包：`docs/mock-interviews/timed-practice-pack-o10-g1.md` · [PR #29](https://github.com/zhangqi77ok-sys/agent-learning-path/pull/29) **已合**（O10 ②⑦不可砍；G1 骨架/归属/SPOF/SLO 不可砍）
+- README/About + Trace 旁注：`docs/mock-interviews/trace-interview-notes.md` · [PR #31](https://github.com/zhangqi77ok-sys/agent-learning-path/pull/31) **已合**
 - 下一步：按练习包脱稿掐表（纪要可存 `timed-log-YYYYMMDD.md`）
