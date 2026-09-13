@@ -15,4 +15,5 @@
 |------|------|------|------|------|
 | R1 | 2026-09-13 | O1/O4/O5/O8/O10 + G7/O9 | [round-01-deep-dive-and-java.md](round-01-deep-dive-and-java.md) | 已合；O10 附录 A/B 已补 |
 | R2 | 2026-09-13 | Q1/Q2/Q12 + Capstone 五段 | [round-02-q-and-capstone.md](round-02-q-and-capstone.md) | 已合 |
-| R3 | 2026-09-13 | G1 + O10 七段全长 | [round-03-g1-o10.md](round-03-g1-o10.md) | 待审 |
+| R3 | 2026-09-13 | G1 + O10 七段全长 | [round-03-g1-o10.md](round-03-g1-o10.md) | 已合 |
+| 计时模板 | — | O10 2min / G1 15min | [timed-drill-template.md](timed-drill-template.md) | 待审 |
