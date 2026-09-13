@@ -25,7 +25,7 @@
 | 项 | 状态 | 链接 / 路径 |
 |----|------|-------------|
 | B1 调研稿 | **已合 main** | `docs/b1-durable-runtime-research.md` · [PR #16](https://github.com/zhangqi77ok-sys/agent-learning-path/pull/16) |
-| B1-code Temporal | **PR 开出，待网页 Merge** | `curriculum/advanced/B1-durable-runtime/` · [PR #17](https://github.com/zhangqi77ok-sys/agent-learning-path/pull/17) |
+| B1-code Temporal | **已合 main** | `curriculum/advanced/B1-durable-runtime/` · [PR #17](https://github.com/zhangqi77ok-sys/agent-learning-path/pull/17) |
 | B2 A2A | 未开 | 身份下行 + 幂等键 + 超时取消 |
 | B3 上下文工程 | 未开 | compaction 保留字段进 Harness |
 
@@ -69,5 +69,5 @@
 
 ## 下一步
 
-1. maxzq / 架构师网页 Merge **#17**。
+1. ~~maxzq / 架构师网页 Merge **#17**。~~ **已合**（2026-09-13）。
 2. Merge 后 @agent学生 开 **B2**（最小 A2A + 负例），结论同样先写 `docs/` 再动代码。
