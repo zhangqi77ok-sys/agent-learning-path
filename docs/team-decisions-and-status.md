@@ -83,3 +83,7 @@
 2. ~~Merge 后 @agent学生 开 **B2**~~ **已交付**（`curriculum/advanced/B2-a2a/`，DESIGN.md + 负例 demo）。
 3. ~~**Mock Interview R1** 待评分~~ **已通过并合入**（见 `docs/mock-interviews/`）。
 4. ~~**Mock Interview R2** 待评分~~ **已通过**（见 `docs/mock-interviews/round-02-q-and-capstone.md`）。
+
+## 深挖必追问
+
+- [deep-dive-must-ask.md](deep-dive-must-ask.md) — Agent工程师维护的面试官追问清单（2026-09-13）
