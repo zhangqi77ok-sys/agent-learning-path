@@ -24,6 +24,6 @@
 
 | 场次 | 日期 | 焦点 | 文档 | 状态 |
 |------|------|------|------|------|
-| R1 | 2026-09-13 | O1/O4/O5/O8/O10 + G7/O9 | [round-01-deep-dive-and-java.md](round-01-deep-dive-and-java.md) | 待审 |
+| R1 | 2026-09-13 | O1/O4/O5/O8/O10 + G7/O9 | [round-01-deep-dive-and-java.md](round-01-deep-dive-and-java.md) | 已合；O10 附录 A/B 已补 |
 | R2 | TBD | Q1/Q2/Q12 + Capstone 五段口述 | — | 未开 |
 | R3 | TBD | 系统开题 G1 + 事故 O10 全长 | — | 未开 |
