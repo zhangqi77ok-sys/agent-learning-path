@@ -10,7 +10,7 @@
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate   # Windows: .\.venv\Scripts\Activate.ps1
-pip install openai
+pip install -r requirements.txt  # 或: pip install openai mcp
 cp .env.example .env        # 填入自己的 Key，勿提交
 export $(grep -v '^#' .env | xargs)  # 或按系统自行设置环境变量
 ```
@@ -32,7 +32,8 @@ export $(grep -v '^#' .env | xargs)  # 或按系统自行设置环境变量
 | 10 | `lesson10/` | KB_SEARCH 工具化，进入 Agent Loop |
 | 11 | `lesson11/` | 手写状态图：retrieve → generate → END |
 | 12 | `lesson12/` | 条件边 + 检索员/回答员 Multi-Agent |
-| 后续 | — | MCP → 评测/Trace 作品化 → 简历包装 |
+| 13 | `lesson13/` | MCP：工具协议化（Server/Client） |
+| 后续 | — | 评测/Trace 作品化 → 简历包装 |
 
 详细学习手册见 `docs/java-to-agent-learning-handbook.md`（部分口径已按「Python 主作品」更新，以本 README 与各课为准）。
 
