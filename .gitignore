@@ -10,3 +10,7 @@ traces/*.json
 
 lesson14/traces/*.json
 lesson14/eval_report.json
+
+node_modules/
+dist/
+*.tsbuildinfo

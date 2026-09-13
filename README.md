@@ -39,7 +39,7 @@
 
 | 项目 | 路径 | 说明 |
 |------|------|------|
-| Hot-pluggable Agent Harness | [`projects/hotplug-harness/`](projects/hotplug-harness/) | 工具/模型/策略插件热加载；Harness 拥有 Loop（Budget / Allowlist / Circuit）；`python demo.py` → `ALL_OK` |
+| Hot-pluggable Agent Harness | [`projects/hotplug-harness/`](projects/hotplug-harness/) | 工具/模型/策略插件热加载；Harness 拥有 Loop（Budget / Allowlist / Circuit）；含 FastAPI + Vite 全栈控制台（浏览器看控制面）；`python demo.py` → `ALL_OK` |
 
 ## 环境
 

@@ -40,6 +40,8 @@ flowchart LR
 
 ## 如何运行
 
+### CLI（原有，不要丢）
+
 ```bash
 cd projects/hotplug-harness
 # 可选：pytest
@@ -47,6 +49,54 @@ pip install -r requirements.txt
 python demo.py          # 末尾应出现 ALL_OK
 python -m pytest -q
 ```
+
+### 全栈控制台（浏览器看控制面）
+
+两个终端。不需要 LLM API Key。
+
+**终端 1 · 后端 FastAPI（端口 8000）**
+
+```bash
+cd projects/hotplug-harness
+pip install -r backend/requirements.txt
+python -m uvicorn backend.app:app --reload --host 127.0.0.1 --port 8000
+```
+
+冒烟：
+
+```bash
+curl -s http://127.0.0.1:8000/api/health
+curl -s http://127.0.0.1:8000/api/plugins
+curl -s -X POST http://127.0.0.1:8000/api/demos/happy
+```
+
+**终端 2 · 前端 Vite + React（端口 5173）**
+
+```bash
+cd projects/hotplug-harness/frontend
+npm install
+npm run dev
+```
+
+浏览器打开 http://127.0.0.1:5173 。开发时 Vite 把 `/api` 代理到 8000；CORS 也放行了 localhost Vite 端口。
+
+只验证能编译：
+
+```bash
+cd projects/hotplug-harness/frontend
+npm install && npm run build
+```
+
+### 演示按钮证明什么
+
+| 按钮 | 模型插件 | 期望 status | 证明 |
+|------|----------|-------------|------|
+| Happy | `scripted_happy` | `succeeded` | Model 只 propose echo×2，Harness 跑完收工 |
+| Circuit | `infinite_same_tool` | `circuit_open` | 相同 tool signature 连打，Harness 熔断，不是模型自己停 |
+| Budget | `unique_infinite` | `budget_exceeded` | 每次不同 signature，打满步数由 Budget 停 |
+| Policy | `forbidden_tool` | `policy_blocked` | allowlist 拦 `drop_db`，工具从未执行 |
+
+「重新扫描插件」= `POST /api/plugins/reload`，重新扫 `plugins/` 目录。
 
 ## 如何新增一个 Tool 插件（≤5 步）
 
@@ -84,6 +134,8 @@ projects/hotplug-harness/
   plugins/policies/    # allowlist
   demo.py              # a–e 场景 + ALL_OK
   tests/               # loader / circuit / budget / allowlist
+  backend/             # FastAPI：/api/health /plugins /runs /demos
+  frontend/            # Vite + React 控制台（:5173）
   PASS.md RUN.md
 ```
 
