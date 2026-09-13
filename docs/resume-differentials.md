@@ -7,6 +7,9 @@
 **一句话定位（可放简历摘要）**  
 四年 Java 背景转向 Agent 平台：能把 **网关抬权 → 编排续跑 → 领域事务** 拆清，并用故障注入 + Eval 门禁证明「不双写、不串租、不靠 Prompt 当安全边界」。
 
+
+> 扩展投递条目（+12）：见 [resume-bullets-extended.md](resume-bullets-extended.md)。
+
 ---
 
 ## 差异化 ① · Java 归属链（不是纯 Python Demo）
