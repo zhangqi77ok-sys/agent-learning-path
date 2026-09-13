@@ -29,7 +29,8 @@ export $(grep -v '^#' .env | xargs)  # 或按系统自行设置环境变量
 | 7 | `lesson07/` | RAG 入门：切分 + 检索 + 带引用回答 |
 | 8 | `lesson08/` | Embedding 向量检索，对比关键词 RAG |
 | 9 | `lesson09/` | 混合检索：关键词 + 向量 + RRF |
-| 后续 | — | RAG 工具化进 Agent → LangGraph → MCP |
+| 10 | `lesson10/` | KB_SEARCH 工具化，进入 Agent Loop |
+| 后续 | — | LangGraph / 状态图 → MCP → 作品包装 |
 
 详细学习手册见 `docs/java-to-agent-learning-handbook.md`（部分口径已按「Python 主作品」更新，以本 README 与各课为准）。
 
