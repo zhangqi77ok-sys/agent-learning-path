@@ -1,8 +1,17 @@
+# 主线模块（03-modules/A1-A9、04-frontier/B2、projects/）零依赖即可运行，本文件不需要安装。
+
+# 02-applications 与真实模型调用
 openai>=1.40.0
-mcp>=1.0.0
 fastapi>=0.115.0
 uvicorn>=0.30.0
 pydantic>=2.0.0
 
+# MCP：01-foundations/14-mcp、03-modules/A5
+mcp>=1.0.0
+
+# 状态图与 HITL：02-applications/04-graph-hitl
 langgraph>=0.2.0
 langchain-core>=0.3.0
+
+# 可选：04-frontier/B1-durable-runtime
+# temporalio>=1.7.0

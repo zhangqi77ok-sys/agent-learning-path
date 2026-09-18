@@ -2,7 +2,7 @@
 
 主流热插拔 Harness：工具 / 模型后端 / 策略从 `plugins/` 目录加载，**不改核心循环**即可扩展。
 
-对照课纲 A1（`curriculum/advanced/A1-runtime`）的控制面能力，本项目把「硬编码 tools/executors」升级为 **插件发现 + Protocol 契约**。
+对照课纲 A1（`03-modules/A1-runtime`）的控制面能力，本项目把「硬编码 tools/executors」升级为 **插件发现 + Protocol 契约**。
 
 ## 公式
 
@@ -150,4 +150,4 @@ projects/hotplug-harness/
 - A1：最小控制面（概念 + 故障注入），executors/tools 写在课内文件里
 - 本项目：同样的控制面语义，但 **插件目录热加载**，面向作品集「可扩展 Harness」叙事
 
-**不要修改** `curriculum/advanced/A1–A9` 或 `B1–B2`。
+**不要修改** `03-modules/A1–A9` 或 `B1–B2`。

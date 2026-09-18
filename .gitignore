@@ -5,12 +5,21 @@ __pycache__/
 .env
 .env.*
 !.env.example
-traces/*.json
 .DS_Store
 
-lesson14/traces/*.json
-lesson14/eval_report.json
+# IDE / 本地工具
+.idea/
+.vscode/
+.workbuddy/
 
+# 运行产物
+traces/*.json
+eval_report.json
+01-foundations/15-eval/traces/*.json
+01-foundations/15-eval/eval_report.json
+01-foundations/07-tracing/traces/*.json
+
+# 前端
 node_modules/
 dist/
 *.tsbuildinfo
