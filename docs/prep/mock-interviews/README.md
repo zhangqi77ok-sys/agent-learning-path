@@ -20,7 +20,7 @@
 | 练习包 | — | O10/G1 分段秒表稿 | [timed-practice-pack-o10-g1.md](timed-practice-pack-o10-g1.md) | **已合** |
 | R4 | 2026-09-19 | LLMentor × dsh-java 真机深挖 + 架构 G1/O9/O10 | [round-04-llmentor-dsh-java.md](round-04-llmentor-dsh-java.md) | **整场完成**（深挖 8.5/8.8/9.0 · 架构 G1 9.0 / O9 9.2 / O10 8.9） |
 | R4 复盘 | 2026-09-19 | 缺口 / P0–P2 补学 / 建议 R5 题单 | [round-04-review-and-next.md](round-04-review-and-next.md) | **已合** |
-| R5 深挖 | 2026-09-19 | Loop 对比 + 缺 TOOL_RESULT 排障（A/B） | [round-05-loop-compare-and-trace.md](round-05-loop-compare-and-trace.md) | **深挖段完成**（Q1 8.7 · Q2 9.1 · Q3 9.0 · 均分 8.9；待复盘→R6） |
+| R5 深挖 | 2026-09-19 | Loop 对比 + 缺 TOOL_RESULT 排障（A/B） | [round-05-loop-compare-and-trace.md](round-05-loop-compare-and-trace.md) | **深挖段完成**（均分 8.9；复盘附录已代写；R6-Q1 9.2） |
 | R5 架构 | 2026-09-19 | 写租约冲突 + 两类审批联调（C/D） | [round-05-arch-lease-and-approvals.md](round-05-arch-lease-and-approvals.md) | **已完成**（C 9.3 · D 9.3） |
-| R6 | 2026-09-19 | MCP 投毒 vs plugin 隔离 | [round-06-mcp-poison-and-plugin-isolation.md](round-06-mcp-poison-and-plugin-isolation.md) | **进行中**（Q1 待答） |
+| R6 | 2026-09-19 | MCP 投毒 vs plugin 隔离 | [round-06-mcp-poison-and-plugin-isolation.md](round-06-mcp-poison-and-plugin-isolation.md) | **Q1 完成 9.2**；可续 Q2 |
 | Trace 旁注 | — | 定层 + 缺 filter 硬否决 | [trace-interview-notes.md](trace-interview-notes.md) | **已合** |
