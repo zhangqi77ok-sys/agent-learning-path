@@ -47,8 +47,9 @@
 
 - R6-Q1：已完成（9.2）
 - R6-Q2：已完成（**9.4**）
-- R6-Q3：题面+金标已出；**待答**
-- R6 均分暂估：(9.2+9.4)/2=**9.3**（Q3 后重算）
+- R6-Q3：已完成（**9.5**）
+- **R6 均分：(9.2+9.4+9.5)/3=9.37 ≈ 9.4**
+- R6 深挖段可收束；复盘漏句已在 R4 附录；下轮可开 R7 或交架构侧
 
 ---
 
@@ -66,7 +67,10 @@
 
 ### 候选人解答
 
-_（待填）_
+1. 内存不够；Store key=`(serverId,name)` value=`{fp,status,epoch,approvedBy}`；仅人工 approve `pending→active`；list 不能自批。
+2. B 只写 `pending_review`；PRE 读共享 active；会话层 `SessionWriteLease` 单写+粘滞，防 A 放行 B 拒分裂。
+3. 状态机 `active/pending_review/retired`；有 in-flight 禁止切 active；先 cancel/合成 RESULT 再换皮。
+4. `TOOL_CALL` 带 `call.fp`+epoch；execute 前二次校验；落后/换皮→DENY+合成 `FINGERPRINT_FENCE` RESULT，不重放。
 
 ### 金标（Agent工程师）
 
@@ -77,7 +81,14 @@ _（待填）_
 
 ### 评分
 
-_（答后填）_
+| 维度 | 分 | 评语 |
+|------|----|------|
+| 共享 Store 设计 | 9.5/10 | key/value/epoch/人工 approve 齐全 |
+| 多实例不分裂 | 9.5/10 | pending + 共享 active；点 SessionWriteLease 加分 |
+| 滚动状态机 | 9.5/10 | in-flight 禁切；先闭合再换皮 |
+| fencing | 9.5/10 | call.fp+epoch 二次校验；FINGERPRINT_FENCE |
+| **总分** | **9.5/10** | 生产一致性题过关 |
+
 
 ---
 
