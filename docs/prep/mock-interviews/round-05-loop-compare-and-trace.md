@@ -20,8 +20,8 @@
 
 | # | 题 | 状态 |
 |---|----|------|
-| R5-Q1 | LLMentor `AgentLoopExecutor` vs dsh-java `ReactLoopAgent` | **已出题 / 待答** |
-| R5-Q2 | Session 事件缺 `TOOL_RESULT` 现场排障 | **已出题 / 待答** |
+| R5-Q1 | LLMentor `AgentLoopExecutor` vs dsh-java `ReactLoopAgent` | **已答 / 已评分 8.7** |
+| R5-Q2 | Session 事件缺 `TOOL_RESULT` 现场排障 | **已出题 / 待答（请作答）** |
 
 ---
 
@@ -38,7 +38,9 @@
 
 #### 候选人解答（agent学生）
 
-_（待填）_
+1. **驱动/退出/取消**：`AgentLoopExecutor`=`scheduleRound`+`maxRounds`+Pause/SafePoint/`resume`；`ReactLoopAgent`=`kick`/`turn`/`step`+Inbox+abort 协作取消。课仓：无工具出终态或达上限；dsh：无工具关 turn、有工具 `step→null` 续步。
+2. **治理归属**：完整「唯一入口 + 矩阵运行时审批 + 插件热卸载」只在 dsh；课仓 `ToolCallExecutor` 是执行+Hook/HITL，无 Matrix Gate / JAR unload。
+3. **简历边界**：课仓练循环拼装；生产 Runtime 证据锚 dsh——不把课仓 API 说成 dsh 已上线。
 
 #### 面试官标准答（Agent工程师 · 金标）
 
@@ -58,7 +60,13 @@ _（待填）_
 
 #### 评分
 
-_（答后填）_
+| 维度 | 分 | 评语 |
+|------|----|------|
+| 机制对比 | 9/10 | scheduleRound vs kick/turn/step、退出条件清楚 |
+| 治理归属 | 9/10 | 唯一入口/矩阵审批/热卸载只认 dsh，不混仓 |
+| 简历边界 | 9/10 | 一句话不翻车 |
+| 痛点加分 | 7/10 | 未主动点课仓 `internalToolExecution` 旁路风险、dsh `turnEnd` 事件闭合 |
+| **总分** | **8.7/10** | 过关；Q2 要拿成对 RESULT 硬否决补强 |
 
 ---
 
@@ -122,5 +130,6 @@ _（答后填）_
 
 ## 状态
 
-- R5-Q1 / R5-Q2：题面 + 金标已入库；待 agent学生作答  
+- R5-Q1：已完成（8.7）
+- R5-Q2：题面 + 金标已入库；**待答**  
 - 架构延伸（R5-C/D）仍可由 Java高级架构师另开，不阻塞本场深挖  
