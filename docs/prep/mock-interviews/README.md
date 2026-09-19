@@ -18,5 +18,5 @@
 | R3 | 2026-09-13 | G1 + O10 七段全长 | [round-03-g1-o10.md](round-03-g1-o10.md) | 已合 |
 | 计时模板 | — | O10 2min / G1 15min | [timed-drill-template.md](timed-drill-template.md) | 已合 |
 | 练习包 | — | O10/G1 分段秒表稿 | [timed-practice-pack-o10-g1.md](timed-practice-pack-o10-g1.md) | **已合** |
-| R4 | 2026-09-19 | LLMentor × dsh-java 真机深挖（ReactLoop/ToolCall） | [round-04-llmentor-dsh-java.md](round-04-llmentor-dsh-java.md) | **进行中**（Q1 已评；Q2 待答） |
+| R4 | 2026-09-19 | LLMentor × dsh-java 真机深挖（ReactLoop/ToolCall） | [round-04-llmentor-dsh-java.md](round-04-llmentor-dsh-java.md) | **进行中**（Q1 8.5 · Q2 8.8；Q3 待答） |
 | Trace 旁注 | — | 定层 + 缺 filter 硬否决 | [trace-interview-notes.md](trace-interview-notes.md) | **已合** |

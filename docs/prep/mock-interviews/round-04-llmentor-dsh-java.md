@@ -40,8 +40,8 @@
 | # | 题 | 侧 | 状态 |
 |---|----|----|------|
 | Q1 | ReactLoopAgent：kick/turn/step + 协作式 cancel + Inbox 重入 | 深挖 | **已答 / 已评分** |
-| Q2 | ToolCallExecutor 唯一入口 · 审批/Hook DENY · 前缀路由 | 深挖 | **已出题 / 待答** |
-| Q3 | 插件卸载回收（工具/提示/Hook）与 ClassLoader 隔离 | 深挖 | 待出 |
+| Q2 | ToolCallExecutor 唯一入口 · 审批/Hook DENY · 前缀路由 | 深挖 | **已答 / 已评分** |
+| Q3 | 插件卸载回收（工具/提示/Hook）与 ClassLoader 隔离 | 深挖 | **已出题 / 待答** |
 | Q4 | LLMentor `AgentLoopExecutor` vs dsh `ReactLoopAgent` 边界 | 深挖 | 待出 |
 | G1 | 归属链：Gateway → Harness → Outbox/领域 API | 架构 | 待 Java高级架构师接 |
 | O9/O10 | 审批与事故七段 | 架构 | 待接 |
@@ -104,7 +104,7 @@
 
 ---
 
-### Q2 · ToolCallExecutor 唯一入口（待答）
+### Q2 · ToolCallExecutor 唯一入口
 
 #### 面试官提问（Agent工程师）
 
@@ -118,7 +118,11 @@
 
 #### 候选人解答（agent学生）
 
-_（待填）_
+- **证据**：`ToolCallExecutor.runGroup/shouldBlock/checkApproval/appendToolCall`；`PluginToolDefinition`；`McpToolAdapter`；`MatrixRuntimeApprovalGate`。
+- **唯一入口**：全工具必须过 Executor，才能保证事件成对 + 审批不旁路。
+- **流水线（以源码为准）**：parse → PRE → 审批 → `tool_call` → execute → POST → 有序 `tool_result`（指出源码里 PRE 在审批前，与部分注释顺序不一致）。
+- **DENY**：PRE DENY → `HOOK_BLOCKED`；审批 DENY → `APPROVAL_REQUIRED`；均写合成失败结果、不执行真工具。
+- **前缀**：`plugin__` / `mcp__` 为 Registry 限定名，用于路由、按全名审批、卸载回收。
 
 #### 面试官标准答（Agent工程师 · 金标 · 先公布供对照）
 
@@ -128,15 +132,17 @@ _（待填）_
 - `ToolCallExecutor` 集中：参数解析、事件成对、审批、Hook、并发/取消、结果顺序。
 - 绕过它 = 审计断裂 + 审批失效 + 回放无法重建。
 
-**流水线（与源码注释一致）**
+**流水线（以 `ToolCallExecutor` 方法体为准；javadoc 若写反以代码为准）**
 
 1. `argumentsParser.parse` 解析参数  
-2. 记录 `tool_call` 事件（含序号，供 result 关联）  
-3. `RuntimeApprovalGate`：DENY → **不执行**，写入**合成失败** `tool_result`（会话回放仍成对）  
-4. PRE Hook（`HookPoint.PRE_TOOL_USE`）：BLOCK/DENY → 跳过真实执行，合成失败（如 `HOOK_BLOCKED`）  
-5. 调用 registry 中的工具实现  
-6. POST Hook（只观察，不改已产生输出）  
-7. 按派发顺序写 `tool_result`（并行时也要防交叉乱序）
+2. PRE Hook（`shouldBlock` / PRE_TOOL_USE）：BLOCK/DENY → 跳过真实执行，合成失败（如 `HOOK_BLOCKED`）  
+3. `checkApproval` / `RuntimeApprovalGate`（如 `MatrixRuntimeApprovalGate`）：DENY → **不执行**，合成失败（如 `APPROVAL_REQUIRED`）  
+4. `appendToolCall` 记录 `tool_call` 事件（含序号，供 result 关联）——具体插入点以本机方法体为准，但**成对**是硬约束  
+5. 调用 registry 中的工具实现（`plugin__*` / `mcp__*` 经 `PluginToolDefinition` / `McpToolAdapter`）  
+6. POST Hook（只观察）  
+7. 按派发顺序写 `tool_result`（并行时防交叉乱序）
+
+> 金标修正：候选人指出「PRE 在审批前」——与方法体行序一致；面试时要能解释「注释/文档过期时以代码为真相」。
 
 **DENY 两种的差别（面试常混）**
 
@@ -160,11 +166,60 @@ _（待填）_
 
 #### 评分
 
+| 维度 | 分 | 评语 |
+|------|----|------|
+| 机制正确性 | 9/10 | 唯一入口、成对事件、两种 DENY 合成失败均正确 |
+| 证据锚定 | 9/10 | Executor/Gate/Plugin/MCP 类名扎实 |
+| 源码诚实度 | 9.5/10 | 敢于纠正「PRE vs 审批」顺序，对齐方法体 |
+| 生产痛点 | 7.5/10 | 未主动攻「Gate 默认放行 / Hook 未注入即裸奔」 |
+| **总分** | **8.8/10** | 过关偏强；补强默认安全策略与卸载回收 |
+
+**缺口**：默认 allow / Hook 空注入时的事故面；下一题强制讲卸载回收。
+
+---
+
+### Q3 · 插件卸载回收（待答）
+
+#### 面试官提问（Agent工程师）
+
+> 场景：生产上刚热更新了一个带 `shell_execute` 包装的 Java 插件，发现 prompt 投毒，要立刻卸载。
+> 1. 从哪个 API/用例开始卸？（点 `IHarnessPlugin*Api` 或等价 command）
+> 2. 卸载后必须从哪些注册表消失：工具名（含 `plugin__` 前缀）、系统提示增量、PRE/POST Hook、ClassLoader 是否可 GC？
+> 3. 若正在跑的 turn 里已经 `tool_call` 了该插件工具，unload 与 in-flight 执行谁赢？会不会留下悬挂 `tool_result`？
+> 4. 对照 `E:\LLMentor`：那边的 Agent 实验台有没有同等「卸载回收」？没有的话，面试怎么诚实表述两项目边界？
+>
+> 必须带本机路径/类名；讲不清 in-flight 直接判痛点题不及格。
+
+#### 候选人解答（agent学生）
+
+_（待填）_
+
+#### 面试官标准答（Agent工程师 · 金标）
+
+**目标**：卸载 = **撤销能力注册**，不是只删 jar 文件。
+
+1. **入口**：插件命令 API（安装/激活/停用/卸载）→ domain 插件生命周期；停用应先于物理删除。
+2. **回收清单**（缺一算泄漏）：
+   - Tool registry 中该 plugin 贡献的全部 tool（含限定名）
+   - 注入的 system prompt / skill 片段
+   - Hook 订阅
+   - 子进程/Node bridge 连接（若有）
+   - 自定义 ClassLoader 去掉强引用，避免类泄漏
+3. **in-flight**：
+   - 已进入 `ToolCallExecutor` 的调用：应跑完或协作取消，并**仍写 tool_result**（成功/失败/ABORTED），禁止悬挂
+   - 未开始的同名调用：registry miss → 合成失败，而不是 NPE
+4. **与 LLMentor 边界**：LLMentor 多为进程内示例 Agent，通常**没有**生产级热卸载；面试表述：「课内验证 ReAct/MCP/RAG；热插拔回收与审批矩阵以 dsh-java / hotplug-harness 为准。」
+
+**痛点**：只删文件不卸注册 → 「幽灵工具」仍可被模型点名；unload 时杀线程 → 事件不成对。
+
+#### 评分
+
 _（答后填）_
 
 ---
 
 ## 本场纪律
+
 
 1. 证据只承认：本机路径、本仓库 `projects/hotplug-harness`、已合 PR 文档。  
 2. 课程工程（LLMentor）与 Harness（dsh-java）**角色不同**，混为一谈直接扣「架构归属」分。  
@@ -172,6 +227,7 @@ _（答后填）_
 
 ## 状态
 
-- Q1：已完成  
-- Q2：已出题 + 标准答已入库；等待 agent学生作答后补「候选人解答 / 评分」  
-- 架构侧：Q1/Q2 深挖轮后由 Java高级架构师接 G1/O9/O10  
+- Q1：已完成（8.5）  
+- Q2：已完成（8.8）；金标已按源码顺序修正 PRE→审批  
+- Q3：已出题 + 金标入库；待 agent学生作答  
+- 架构侧：深挖 Q3 评完后由 Java高级架构师接 G1/O9/O10  
