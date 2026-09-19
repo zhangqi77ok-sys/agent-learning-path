@@ -19,4 +19,6 @@
 | 计时模板 | — | O10 2min / G1 15min | [timed-drill-template.md](timed-drill-template.md) | 已合 |
 | 练习包 | — | O10/G1 分段秒表稿 | [timed-practice-pack-o10-g1.md](timed-practice-pack-o10-g1.md) | **已合** |
 | R4 | 2026-09-19 | LLMentor × dsh-java 真机深挖 + 架构 G1/O9/O10 | [round-04-llmentor-dsh-java.md](round-04-llmentor-dsh-java.md) | **整场完成**（深挖 8.5/8.8/9.0 · 架构 G1 9.0 / O9 9.2 / O10 8.9） |
+| R4 复盘 | 2026-09-19 | 缺口/补学/下一轮题单 | [round-04-review-and-next.md](round-04-review-and-next.md) | **已合** |
+| R5 | 2026-09-19 | Loop 对比 + 缺 TOOL_RESULT 排障（复盘后再面） | [round-05-loop-compare-and-trace.md](round-05-loop-compare-and-trace.md) | **进行中**（题面+金标已出；待答） |
 | Trace 旁注 | — | 定层 + 缺 filter 硬否决 | [trace-interview-notes.md](trace-interview-notes.md) | **已合** |
