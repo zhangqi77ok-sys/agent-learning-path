@@ -46,7 +46,8 @@
 ## 状态
 
 - R6-Q1：已完成（9.2）
-- R6-Q2：题面+金标已出；**待答**
+- R6-Q2：已完成（**9.4**）
+- R6 均分暂估：(9.2+9.4)/2=**9.3**；可续 Q3（Store 并发/多实例一致性）或复盘入库
 
 ---
 
@@ -64,7 +65,10 @@
 
 ### 候选人解答
 
-_（待填）_
+1. `fp=H(name+desc+schema+serverId)`；A5 有 `ToolRecord`；dsh 应补 `ToolFingerprintStore`，挂 `McpBootstrap`/`ToolRegistry.register`，禁静默覆盖。
+2. 同名 hash 变 → 拒覆盖 + `pending_review`；metric `tool_fingerprint_drift_total`；默认不自动切新皮。
+3. PRE 重算 `liveFp` 比对 approved；矩阵 key=`(name,fp)`；`sessionAllowed` 只记名是缺口。
+4. CALL 已写 → 禁 execute、合成 `TOOL_RESULT(FINGERPRINT_DRIFT)`、闸新 turn、不重放副作用。
 
 ### 金标（Agent工程师）
 
@@ -75,4 +79,11 @@ _（待填）_
 
 ### 评分
 
-_（答后填）_
+| 维度 | 分 | 评语 |
+|------|----|------|
+| A5 vs dsh 分界 | 9.5/10 | ToolRecord vs 应补 Store，不装已有 |
+| 漂移策略 | 9.5/10 | 拒覆盖+pending+metric，不自动切皮 |
+| 换皮检测 | 9.5/10 | PRE liveFp；矩阵 (name,fp)；点名 sessionAllowed 缺口 |
+| 成对 RESULT | 9.5/10 | FINGERPRINT_DRIFT 合成、闸 turn、禁重放 |
+| **总分** | **9.4/10** | 安全设计题过关 |
+
