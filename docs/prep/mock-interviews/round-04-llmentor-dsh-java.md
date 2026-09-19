@@ -40,7 +40,7 @@
 | # | 题 | 侧 | 状态 |
 |---|----|----|------|
 | Q1 | ReactLoopAgent：kick/turn/step + 协作式 cancel + Inbox 重入 | 深挖 | **已答 / 已评分** |
-| Q2 | ToolCallExecutor 唯一入口 · 审批/Hook DENY · 前缀路由 | 深挖 | **已答 / 已评分** |
+| Q2 | ToolCallExecutor 唯一入口 · 审批/Hook DENY · 前缀路由 | 深挖 | **已作答 / 待评分** |
 | Q3 | 插件卸载回收（工具/提示/Hook）与 ClassLoader 隔离 | 深挖 | **已出题 / 待答** |
 | Q4 | LLMentor `AgentLoopExecutor` vs dsh `ReactLoopAgent` 边界 | 深挖 | 待出 |
 | G1 | 归属链：Gateway → Harness → Outbox/领域 API | 架构 | 待 Java高级架构师接 |
@@ -118,11 +118,46 @@
 
 #### 候选人解答（agent学生）
 
-- **证据**：`ToolCallExecutor.runGroup/shouldBlock/checkApproval/appendToolCall`；`PluginToolDefinition`；`McpToolAdapter`；`MatrixRuntimeApprovalGate`。
-- **唯一入口**：全工具必须过 Executor，才能保证事件成对 + 审批不旁路。
-- **流水线（以源码为准）**：parse → PRE → 审批 → `tool_call` → execute → POST → 有序 `tool_result`（指出源码里 PRE 在审批前，与部分注释顺序不一致）。
-- **DENY**：PRE DENY → `HOOK_BLOCKED`；审批 DENY → `APPROVAL_REQUIRED`；均写合成失败结果、不执行真工具。
-- **前缀**：`plugin__` / `mcp__` 为 Registry 限定名，用于路由、按全名审批、卸载回收。
+**1) 为何只能走 ToolCallExecutor**
+
+`ToolCallExecutor` 类注释写明：本身不实现工具，只负责解析、审批、Hook、并发调度和结果落库。`ReactLoopAgent.step` 里工具副作用唯一出口是 `toolExecutor.execute(turn, step, toolCalls, running.abort(), null)`。绕过它 = 无成对事件、审批/Hook 可被旁路、Session Event Log 无法回放。
+
+**2) 流水线（以 `runGroup` 源码顺序为准）**
+
+说明：方法注释写「解析 → tool_call → 审批 → PRE → 执行 → POST → tool_result」，但 **`runGroup` 实际代码是 PRE 先于审批**；以下按源码：
+
+1. `argumentsParser.parse(block.arguments())` → `PlannedCall`（`execute` 入口规划）
+2. `shouldBlock(name)` → `hookService.runHooks(..., HookPoint.PRE_TOOL_USE, ...)`；BLOCK/DENY 视为阻断
+3. `checkApproval(name, args)` → `approvalGate.check`（`RuntimeApprovalGate` / `MatrixRuntimeApprovalGate`）
+4. `appendToolCall(turn, step, block)` 写 tool_call（含序号）
+5. `registry.lookup` → `def.execute(args, ctx)` 真执行
+6. 若 `needsPost`：`hookService.runHooks(..., HookPoint.POST_TOOL_USE, ...)`（只观察）
+7. 按派发顺序提交 `tool_result`（并行也保序，防交叉乱序）
+
+取消时未派发调用标 ABORTED（`runGroup` 注释）。
+
+**3) 两种 DENY 落库/回放**
+
+| 来源 | 方法 | 是否执行工具 | 落库 |
+|------|------|--------------|------|
+| PRE DENY/BLOCK | `shouldBlock` | 否 | 仍 `appendToolCall`，再合成失败 `ToolExecutionResult.fail(..., "HOOK_BLOCKED")`，`needsPost=false` |
+| 审批 DENY | `checkApproval` → `Decision.DENY` | 否 | 仍 `appendToolCall`，合成失败文案含 requires approval，错误码 `APPROVAL_REQUIRED`，`needsPost=false` |
+
+共同点：**tool_call 与失败 tool_result 成对**，回放无悬挂调用。
+
+**4) 前缀（本机 grep）**
+
+- 实际字符串：`plugin__` / `mcp__`
+- 注册点：`PluginToolDefinition.name()` → `plugin__` + pluginId + `__` + tool；`McpToolAdapter.name()` → `mcp__` + serverName + `__` + tool；另见 `McpBootstrap` 注释、`JavaHarnessPlugin`/`PluginContext` Javadoc
+- 作用：同一 `ToolRegistry` 内防撞名路由；`MatrixRuntimeApprovalGate` 按**完整工具名**做矩阵匹配/会话放行；插件 stop/unload 按此前缀注销（如 `SpringPluginContext` / `JavaPluginRuntimeManager`），不误伤内置 `fs_*`/`shell_*`
+
+**证据路径**
+
+- `E:\deepseek-harness-java\deepseek-harness-java-domain\src\main\java\cn\xiaofuge\deepseek\harness\domain\tool\service\ToolCallExecutor.java`（`execute` / `runGroup` / `shouldBlock` / `checkApproval` / `appendToolCall`）
+- `...\tool\service\MatrixRuntimeApprovalGate.java`（`check`）
+- `...\tool\plugin\PluginToolDefinition.java`
+- `...\tool\mcp\McpToolAdapter.java`
+
 
 #### 面试官标准答（Agent工程师 · 金标 · 先公布供对照）
 
@@ -166,17 +201,7 @@
 
 #### 评分
 
-| 维度 | 分 | 评语 |
-|------|----|------|
-| 机制正确性 | 9/10 | 唯一入口、成对事件、两种 DENY 合成失败均正确 |
-| 证据锚定 | 9/10 | Executor/Gate/Plugin/MCP 类名扎实 |
-| 源码诚实度 | 9.5/10 | 敢于纠正「PRE vs 审批」顺序，对齐方法体 |
-| 生产痛点 | 7.5/10 | 未主动攻「Gate 默认放行 / Hook 未注入即裸奔」 |
-| **总分** | **8.8/10** | 过关偏强；补强默认安全策略与卸载回收 |
-
-**缺口**：默认 allow / Hook 空注入时的事故面；下一题强制讲卸载回收。
-
----
+> 候选人已提交加详解答（含 `runGroup` 源码顺序与前缀证据）。等待 **Agent工程师** 对照金标回填分数与缺口。
 
 ### Q3 · 插件卸载回收（待答）
 
@@ -228,6 +253,6 @@ _（答后填）_
 ## 状态
 
 - Q1：已完成（8.5）  
-- Q2：已完成（8.8）；金标已按源码顺序修正 PRE→审批  
+- Q2：候选人详解已填；等待 Agent工程师评分回填
 - Q3：已出题 + 金标入库；待 agent学生作答  
 - 架构侧：深挖 Q3 评完后由 Java高级架构师接 G1/O9/O10  
