@@ -41,7 +41,7 @@
 |---|----|----|------|
 | Q1 | ReactLoopAgent：kick/turn/step + 协作式 cancel + Inbox 重入 | 深挖 | **已答 / 已评分** |
 | Q2 | ToolCallExecutor 唯一入口 · 审批/Hook DENY · 前缀路由 | 深挖 | **已答 / 已评分** |
-| Q3 | 插件卸载回收（工具/提示/Hook）与 ClassLoader 隔离 | 深挖 | **已出题 / 待答** |
+| Q3 | 插件卸载回收（工具/提示/Hook）与 ClassLoader 隔离 | 深挖 | **已答 / 已评分** |
 | Q4 | LLMentor `AgentLoopExecutor` vs dsh `ReactLoopAgent` 边界 | 深挖 | 待出 |
 | G1 | 归属链：Gateway → Harness → Outbox/领域 API | 架构 | 待 Java高级架构师接 |
 | O9/O10 | 审批与事故七段 | 架构 | 待接 |
@@ -178,8 +178,7 @@
 
 ---
 
-### Q3 · 插件卸载回收（待答）
-
+### Q3 · 插件卸载回收
 #### 面试官提问（Agent工程师）
 
 > 场景：生产上刚热更新了一个带 `shell_execute` 包装的 Java 插件，发现 prompt 投毒，要立刻卸载。
@@ -192,33 +191,39 @@
 
 #### 候选人解答（agent学生）
 
-_（待填）_
+1. **入口**：`POST /api/harness/plugins/{id}/uninstall` → `ManagePluginNode.UNINSTALL`（先 `runtime.stop` 再 `registry.uninstall`）；紧急可用 disable/`STOP`。
+2. **回收**：`JavaPluginRuntimeManager.stop` → `context.close` 逆序回收 `plugin__` 工具 / Hook / prompt / 订阅 + ClassLoader unload + `hookRegistry.unregisterAll`。
+3. **in-flight**：注册面 unload 赢；`stop` 不与 in-flight 联动（abort 属 `Agent.cancel`）。已 `appendToolCall` 应靠执行失败闭合 `tool_result`，但 stop 不等待 inFlight——**生产痛点：先 cancel Agent 再卸**。主动认账。
+4. **边界**：LLMentor 无对等热卸载（仅 `ToolCircuitBreakerHook`）；课仓 ≠ Harness 运行时。
 
 #### 面试官标准答（Agent工程师 · 金标）
 
 **目标**：卸载 = **撤销能力注册**，不是只删 jar 文件。
 
-1. **入口**：插件命令 API（安装/激活/停用/卸载）→ domain 插件生命周期；停用应先于物理删除。
-2. **回收清单**（缺一算泄漏）：
-   - Tool registry 中该 plugin 贡献的全部 tool（含限定名）
-   - 注入的 system prompt / skill 片段
-   - Hook 订阅
-   - 子进程/Node bridge 连接（若有）
-   - 自定义 ClassLoader 去掉强引用，避免类泄漏
+1. **入口**：插件命令 API（安装/激活/停用/卸载）→ domain 插件生命周期；停用应先于物理删除。紧急路径可用 disable/STOP。
+2. **回收清单**（缺一算泄漏）：Tool registry（含 `plugin__` 限定名）、system prompt/skill 片段、Hook 订阅、子进程/Node bridge、ClassLoader 强引用去除。
 3. **in-flight**：
-   - 已进入 `ToolCallExecutor` 的调用：应跑完或协作取消，并**仍写 tool_result**（成功/失败/ABORTED），禁止悬挂
+   - 已进入 `ToolCallExecutor`：应跑完或协作取消，并**仍写 tool_result**（成功/失败/ABORTED），禁止悬挂
    - 未开始的同名调用：registry miss → 合成失败，而不是 NPE
-4. **与 LLMentor 边界**：LLMentor 多为进程内示例 Agent，通常**没有**生产级热卸载；面试表述：「课内验证 ReAct/MCP/RAG；热插拔回收与审批矩阵以 dsh-java / hotplug-harness 为准。」
+   - **运维顺序**：先 `Agent.cancel`（或等价 abort）再 unload；若 runtime.stop 不等 inFlight，必须在 runbook 写明，否则事件可能断裂
+4. **与 LLMentor 边界**：课内验证 ReAct/MCP/RAG；热插拔回收与审批矩阵以 dsh-java / `projects/hotplug-harness` 为准。
 
-**痛点**：只删文件不卸注册 → 「幽灵工具」仍可被模型点名；unload 时杀线程 → 事件不成对。
+**痛点**：只删文件不卸注册 → 幽灵工具；unload 时杀线程 → 事件不成对；stop 与 in-flight 无联动且不先 cancel → 半截副作用。
 
 #### 评分
 
-_（答后填）_
+| 维度 | 分 | 评语 |
+|------|----|------|
+| API/生命周期 | 9/10 | uninstall/stop/disable 路径与类名清楚 |
+| 回收清单 | 9/10 | 工具/Hook/prompt/CL 都点到 |
+| in-flight 痛点 | 9/10 | 主动承认 stop 不等 inFlight，给出「先 cancel 再卸」 |
+| 项目边界 | 9/10 | LLMentor 无热卸载，表述诚实 |
+| **总分** | **9.0/10** | 痛点题过关；可再补「registry miss 合成失败」防 NPE 一句 |
 
 ---
 
 ## 本场纪律
+
 
 
 1. 证据只承认：本机路径、本仓库 `projects/hotplug-harness`、已合 PR 文档。  
@@ -228,6 +233,6 @@ _（答后填）_
 ## 状态
 
 - Q1：已完成（8.5）  
-- Q2：已完成（8.8）；金标已按源码顺序修正 PRE→审批  
-- Q3：已出题 + 金标入库；待 agent学生作答  
-- 架构侧：深挖 Q3 评完后由 Java高级架构师接 G1/O9/O10  
+- Q2：已完成（8.8）  
+- Q3：已完成（9.0）；深挖三题均过关  
+- 架构侧：**交接** Java高级架构师接 G1/O9/O10（归属链/审批/事件溯源），续写本文件或 `round-04b`  
