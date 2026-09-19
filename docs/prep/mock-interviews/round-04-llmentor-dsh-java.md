@@ -43,9 +43,9 @@
 | Q2 | ToolCallExecutor 唯一入口 · 审批/Hook DENY · 前缀路由 | 深挖 | **已答 / 已评分** |
 | Q3 | 插件卸载回收（工具/提示/Hook）与 ClassLoader 隔离 | 深挖 | **已答 / 已评分** |
 | Q4 | LLMentor `AgentLoopExecutor` vs dsh `ReactLoopAgent` 边界 | 深挖 | 待出 |
-| G1 | 归属链：Trigger/API → Harness → Tool/审批 → Session Event Log | 架构 | **已出题 / 待答** |
-| O9 | 运行期审批：Matrix Gate + Broker 挂起/放行 | 架构 | **已出题 / 待答** |
-| O10 | 事件溯源事故七段：不成对 tool_result / 写租约 / 重建 | 架构 | **已出题 / 待答** |
+| G1 | 归属链：Trigger/API → Harness → Tool/审批 → Session Event Log | 架构 | **已答 / 已评分 9.0** |
+| O9 | 运行期审批：Matrix Gate + Broker 挂起/放行 | 架构 | **已答 / 已评分 9.2** |
+| O10 | 事件溯源事故七段：不成对 tool_result / 写租约 / 重建 | 架构 | **已答 / 已评分 8.9** |
 
 ---
 
@@ -239,7 +239,28 @@
 
 #### 候选人解答（agent学生）
 
-（待答）
+**1) 进线**
+
+用户消息走 Trigger：`AgentController`（`POST /api/agent/message` 阻塞；`POST /api/agent/stream` SSE）→ `IAgentApi` / `IAgentStreamApi`（另有 `IGatewayStreamApi` 网关流式口）→ case/app 装配会话与 Inbox → domain `ReactLoopAgent.send` 入箱并 `wakeDriver` → `kick` → `turn` → `step`。Trigger **不**直接 `ToolDefinition.execute`。
+
+**2) 三权分立（本仓库事实）**
+
+| 决策/事实 | Owner | 说明 |
+|-----------|-------|------|
+| 能不能调工具 | `ToolCallExecutor` + `MatrixRuntimeApprovalGate`（+ PRE Hook） | 模型只提出 tool_calls；门禁否决也不等于「已发生」 |
+| 工具副作用是否发生 | 过门禁后的 `ToolDefinition.execute`（内置 / `plugin__*` / `mcp__*`） | 只有真实 execute 才改外部世界（shell/fs/MCP/插件） |
+| 会话可回放真相 | `SessionEventLogService.append`（`SessionEventType.TOOL_CALL`/`TOOL_RESULT` 等），写路径经 `SessionWriteLeaseService` | 以事件为准重建；不是内存 Agent phase |
+
+三者**不能**糊成一个组件：混了就会出现「审批过了当已打款」「日志当真相」的事故。
+
+**3) 对标企业三分法（诚实边界）**
+
+- **≈ Gateway**：Trigger 层开跑/流式出口 + 会话登记（谁可以对话），不是完整企业 IAM 抬权网关。
+- **≈ Harness**：`ReactLoopAgent` + `ToolCallExecutor` + `RuntimeApprovalBroker`——编排、取消、工具门禁。
+- **领域 Outbox / 业务库事务**：dsh-java **没有**课仓 A9/B1 的「Signal→Outbox→Java 领域 API 幂等建单」。副作用主要在工具执行环境。面试口径：课仓证归属与幂等设计；dsh-java 证 Java Harness/事件/审批工程化；**不**声称已上 Temporal 或采购 Outbox。也不把 Session Event Log 叫成 Outbox。
+
+**证据**：`AgentController`；`ReactLoopAgent`；`ToolCallExecutor`；`MatrixRuntimeApprovalGate`；`SessionEventLogService`；课仓 `03-modules/A9-capstone/`、`04-frontier/B1-durable-runtime/OWNERSHIP.md`。
+
 
 #### 面试官标准答（Java高级架构师 · 金标）
 
@@ -268,7 +289,16 @@
 
 #### 评分
 
-（待 agent学生作答后回填）
+| 维度 | 分 | 评语 |
+|------|----|------|
+| 进线与分层 | 8.5/10 | `AgentController` → API → `ReactLoopAgent` 清楚；可再补 SSE/`IGatewayStreamApi` 对照一句 |
+| 三权分立 | 9.5/10 | 门禁决策 / 工具副作用 / Session Event 真相三分到位 |
+| 企业三分法诚实度 | 9.5/10 | 明确 dsh-java 无领域 Outbox/Temporal，不硬套课仓 |
+| 挂科回避 | 9/10 | 未把 Event Log 说成 Outbox |
+| **总分** | **9.0/10** | 架构归属过关；补强 Trigger 多种入口表述即可 |
+
+**缺口**：多入口（阻塞 message vs stream）可画一张更完整进线表。
+
 
 ---
 
@@ -286,7 +316,34 @@
 
 #### 候选人解答（agent学生）
 
-（待答）
+**1) `MatrixRuntimeApprovalGate.check`**
+
+- 已 `allowForSession(tool)` → ALLOW（会话级放行，生产要审计谁放的）
+- `ApprovalModeVO.FULL_OPEN` → 全放行（**高危开关**，矩阵形同虚设）
+- 不在 `permissionMatrixPort.load().approvalRequiredTools()` → ALLOW
+- 需审批且 `AUTO_APPROVE` → ALLOW（自动化场景，需配套审计）
+- 否则 `askHandler`；**askHandler == null → DENY**（防御默认，不是静默放行——痛点：未注入 handler 却以为会弹窗）
+- ask 返回 DENY/CANCEL → Decision.DENY；ALLOW_ONCE / ALLOW_SESSION 则放行（后者写入 sessionAllowed）
+
+**2) Broker 挂起**
+
+`RuntimeApprovalBroker` 实现 `RuntimeApprovalGateway`：`requestApproval` 登记 pending，并对 `CompletableFuture.get(timeoutMs)` **阻塞**（默认 `DEFAULT_TIMEOUT_MS = 600_000` 即 10 分钟）；**超时 → `ApprovalVerdict.DENY`**（不是 ALLOW）。  
+REST：`IRuntimeApprovalApi` / `RuntimeApprovalController` 的 listPending + `resolve(approvalId, verdict)` 完成 future。六边形：trigger 依赖端口，不直耦 Broker。
+
+**3) 两类审批分工**
+
+- **运行期工具审批**：卡在 `ToolCallExecutor` 路径，护 shell/插件即时副作用。
+- **任务审批**（`IHarnessApproval*` / task 聚合）：任务态机，≠ 工具 Gate。  
+本仓 **不是** Flowable/BPMN；企业 `geek-flow` 另套。面试说「Harness 内建 Gate+Broker」，不冒充流程引擎全家桶。
+
+**4) DENY 仍要成对 result**
+
+同 Q2：仍 `appendToolCall` + 合成失败 `APPROVAL_REQUIRED`/`needsPost=false`。否则 `SessionRebuilderService` 重建悬挂 `TOOL_CALL`，相位错乱。
+
+**痛点自检**：矩阵漏配 + FULL_OPEN；askHandler 空；超时当 ALLOW；任务审批通过误当工具已执行。
+
+**证据**：`MatrixRuntimeApprovalGate.check`；`RuntimeApprovalBroker.requestApproval/resolve`；`RuntimeApprovalGateway`；`cases/approval/RuntimeApprovalCaseImpl`；`ToolCallExecutor.checkApproval`。
+
 
 #### 面试官标准答（Java高级架构师 · 金标）
 
@@ -317,7 +374,16 @@
 
 #### 评分
 
-（待答后回填）
+| 维度 | 分 | 评语 |
+|------|----|------|
+| Gate 语义 | 9.5/10 | FULL_OPEN / AUTO_APPROVE / allowForSession / askHandler 空→DENY 均正确 |
+| Broker 挂起 | 9.5/10 | Future 阻塞、resolve 唤醒、10min 超时 DENY、端口依赖说清 |
+| 两类审批分工 | 9/10 | 运行期工具 vs 任务审批；明确非 Flowable |
+| 成对 DENY | 9/10 | 对齐 Q2 合成失败 result |
+| **总分** | **9.2/10** | 审批题过关偏强 |
+
+**缺口**：可再点 `IPermissionMatrixPort` 漏配时的事故面一句。
+
 
 ---
 
@@ -338,7 +404,20 @@
 
 #### 候选人解答（agent学生）
 
-（待答）
+**七段（②⑦不砍）**
+
+1. **场景**：turn 中途 unload 投毒插件，或高危工具审批 DENY；客诉回放缺 `tool_result`、会话重建相位错。
+2. **Ownership（不可砍）**：`ToolCallExecutor` 保证 `TOOL_CALL`/`TOOL_RESULT` 成对；`SessionEventLogService`（经 `SessionWriteLeaseService` acquire/renew/requireWritable，冲突抛 `SessionWriteLeaseConflictException`）拥有追加顺序与租约；`SessionRebuilderService` **只投影**、不补写真相。运维归属：先 `AgentController` cancel（`ReactLoopAgent.cancel`）再 uninstall（Q3）。
+3. **卡点**：事件见 `SessionEventType.TOOL_CALL` 后无匹配 `TOOL_RESULT`；或写租约冲突导致部分 append 失败。
+4. **根因**：把「Registry 已卸 / 审批拒绝 / 杀线程」当成可以不闭合事件；或并发写同 session 无租约。
+5. **修复**：DENY/HOOK_BLOCKED/ABORTED/unknown tool **一律合成失败 result**；unload runbook 强制先 cancel；写入走租约。
+6. **回归**：负例覆盖 DENY 成对、cancel 中途成对、双写租约冲突可观测；CI 卡悬挂 tool_call。
+7. **指标关闭（不可砍）**：悬挂 tool_call → 0；重建相位错误工单 7 日归零；「unload 未先 cancel」变更评审 = 0。
+
+**对齐课仓一句**：A6/A9 Trace→fixture 是评测门禁；dsh-java Session Event Log 是**运行时真相源**——失败也要成对可回放。
+
+**证据**：`SessionEventLogService`；`SessionWriteLeaseService`；`SessionRebuilderService`；`SessionEventType`；`ToolCallExecutor`；`PersistingSessionLog`（若 run 路径经此）。
+
 
 #### 面试官标准答（Java高级架构师 · 金标）
 
@@ -363,7 +442,16 @@
 
 #### 评分
 
-（待答后回填）
+| 维度 | 分 | 评语 |
+|------|----|------|
+| 七段结构 | 9/10 | ② Ownership、⑦ 指标未砍 |
+| 机制正确性 | 9/10 | 成对事件、写租约、Rebuilder 只投影、先 cancel 再 unload |
+| 证据锚定 | 8.5/10 | 类名齐；可再点 `SessionWriteLeaseConflictException` |
+| 与课仓对齐 | 9/10 | Trace→fixture vs Session Event 真相源一句到位 |
+| **总分** | **8.9/10** | 事故口述过关 |
+
+**缺口**：写租约冲突的可观测/告警还可再具体。
+
 
 
 ## 本场纪律
@@ -379,4 +467,7 @@
 - Q1：已完成（8.5）  
 - Q2：已完成（8.8）  
 - Q3：已完成（9.0）；深挖三题均过关  
-- G1 / O9 / O10：题面 + 金标已由 Java高级架构师写入；**待 agent学生作答**，答后架构侧评分回填  
+- G1：已完成（9.0）  
+- O9：已完成（9.2）  
+- O10：已完成（8.9）  
+- R4 架构段收束；深挖+架构均过关  
