@@ -21,7 +21,7 @@
 | # | 题 | 状态 |
 |---|----|------|
 | R5-Q1 | LLMentor `AgentLoopExecutor` vs dsh-java `ReactLoopAgent` | **已答 / 已评分 8.7** |
-| R5-Q2 | Session 事件缺 `TOOL_RESULT` 现场排障 | **已出题 / 待答（请作答）** |
+| R5-Q2 | Session 事件缺 `TOOL_RESULT` 现场排障 | **已答 / 已评分 9.1** |
 
 ---
 
@@ -91,7 +91,10 @@
 
 #### 候选人解答（agent学生）
 
-_（待填）_
+1. **炸点**：`SessionRebuilderService.projectMessages` 缺 ToolResult observation；`derivePhase` 卡 Running/Maintenance。查 `PersistingSessionLog` / `ToolCallExecutor.appendToolResult|appendSkippedToolCall` / `ReactLoopAgent.cancel` / `JavaPluginRuntimeManager.stop` 时间序。
+2. **根因≥3**：cancel 杀线程无 RESULT；unload 夹在 CALL 与缺 RESULT 之间；Broker 超时 DENY 未写合成 RESULT；Hook 抛未捕获；异步镜像写 RESULT 失败——各有一票否决信号。
+3. **最小动作**：优先合成失败 `TOOL_RESULT` 闭合；闸新 turn；勿默默重放 mail（除非幂等可证）。
+4. **30s 叙事**：先 cancel 让 Executor 写 ABORTED 再 unload；否则只有 CALL 无 RESULT → 重建炸 / 幻觉已发。
 
 #### 面试官标准答（Agent工程师 · 金标）
 
@@ -124,6 +127,39 @@ _（待填）_
 
 #### 评分
 
+| 维度 | 分 | 评语 |
+|------|----|------|
+| 炸点定位 | 9/10 | Rebuilder/phase/Executor/stop 时间序到位 |
+| 根因+否决信号 | 9/10 | ≥5 条且含审批超时、Hook、落库 |
+| 最小正确动作 | 9.5/10 | 合成 RESULT + 闸 turn + 禁盲目重放副作用 |
+| 事故串联 | 9/10 | 先 cancel 再 unload 叙事清楚 |
+| **总分** | **9.1/10** | 成对闭合硬纪律过关 |
+
+---
+
+### R5-Q3 · 课仓旁路 vs Harness 闸门（续挖）
+
+#### 面试官提问（Agent工程师）
+
+> R5-Q1 扣分点补考（必须带本机开关/类名）：
+> 1. LLMentor 里工具若走「框架内置自动执行」而不是你的 Executor，会发生什么？如何用配置/代码证明旁路存在或已关掉？
+> 2. dsh-java 若 `MatrixRuntimeApprovalGate` 处于 FULL_OPEN / askHandler=null / Hook 未 `setHookService`，唯一入口还防得住 `shell` 吗？
+> 3. 给出一条**生产默认安全**主张：默认 DENY 还是默认 ALLOW？和课仓演示默认有何冲突？
+>
+> 答不全「默认失败」直接扣痛点分。
+
+#### 候选人解答（agent学生）
+
+_（待填）_
+
+#### 面试官标准答（Agent工程师 · 金标）
+
+1. **课仓旁路**：Spring AI / 课仓若 `internalToolExecutionEnabled(true)`（或等价），模型 tool_calls 由框架直接调工具，你的 `ToolCallExecutor`、审计、HITL 全瞎。证明：搜配置与 `ChatClient` 定制；演示应强制 false，工具只从 Executor 出。
+2. **dsh 伪安全**：唯一入口只保证「过管道」；FULL_OPEN / 空 askHandler 误配置 / Hook 未注入时，管道内仍可能直接执行高危工具。要看 Gate 默认分支与启动校验。
+3. **主张**：生产默认 **DENY/只读允许**，高危工具强制审批+超时合成 DENY RESULT；课仓可为了教学默认宽——简历必须说清「演示默认 ≠ 生产默认」。
+
+#### 评分
+
 _（答后填）_
 
 ---
@@ -131,5 +167,6 @@ _（答后填）_
 ## 状态
 
 - R5-Q1：已完成（8.7）
-- R5-Q2：题面 + 金标已入库；**待答**  
+- R5-Q2：已完成（9.1）
+- R5-Q3：已出题 + 金标；**待答**（补 Q1 旁路/默认失败）  
 - 架构延伸（R5-C/D）仍可由 Java高级架构师另开，不阻塞本场深挖  
