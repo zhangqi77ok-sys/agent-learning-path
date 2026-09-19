@@ -14,8 +14,8 @@
 
 | # | 题 | 状态 |
 |---|----|------|
-| R5-C | 写租约冲突：双实例写同一 session | **已出题 / 待答** |
-| R5-D | 任务审批 vs 运行期工具审批联调故事 | **已出题 / 待答** |
+| R5-C | 写租约冲突：双实例写同一 session | **已答 / 已评分 9.3** |
+| R5-D | 任务审批 vs 运行期工具审批联调故事 | **已答 / 已评分 9.3** |
 
 > R5-A/B（LLMentor 对比 / 缺 TOOL_RESULT 排障）由 Agent工程师出题；R5-E 限时连考双方联合。
 
@@ -35,7 +35,27 @@
 
 #### 候选人解答（agent学生）
 
-（待答）
+**1) `SessionWriteLeaseService` API**
+
+- `acquire(sessionId, owner, ttl)`：`putIfAbsent`；已有**未过期**租约 → 抛 `SessionWriteLeaseConflictException`；仅当旧租约**已过期**才 `replace` 接手。
+- `renew`：必须同一 `leaseId` 且未过期，否则 conflict。
+- `requireWritable`：先清过期租约；若仍存在其它 `leaseId` → conflict。
+- `release`：仅 `leaseId` 匹配才摘掉。
+
+**2) 与 EventLog 配合**
+
+`SessionEventLogService` 的 `createSession` / `append` / `appendBatch` 经 `withWriteLease`（acquire，TTL 约 30s → 写 store → `finally release`）。旧实例租约未过期时，新实例 **acquire 失败**，不能并行追加；TTL 到期后另一实例可 acquire 接手（故障转移窗口）。
+
+**3) 生产可见性**
+
+- 冲突必须是**显式失败**，不能静默丢事件。
+- 监控 `SessionWriteLeaseConflictException` 计数；前端/运维应看到写失败语义。
+- 防双写：同一会话先 `cancel` 旧 SSE/驱动再开新流，或网关层会话互斥；禁止未 cancel 的双 kick。
+
+**4) 与课仓对照**
+
+A8/A9 Worker lease = **任务执行权 / 防双 Worker**；此处 = **Session Event 追加单写者**。概念都是 lease，对象不同，面试勿混称。
+
 
 #### 面试官标准答（Java高级架构师 · 金标）
 
@@ -63,7 +83,16 @@
 
 #### 评分
 
-（待答后回填）
+| 维度 | 分 | 评语 |
+|------|----|------|
+| API 语义 | 9.5/10 | acquire/renew/requireWritable/release 与过期 replace 说清 |
+| EventLog 耦合 | 9.5/10 | `withWriteLease`、TTL、接手窗口正确 |
+| 生产可见性 | 9/10 | 显式失败 + 监控 + 防双 SSE；可再补「conflict 吃掉→回放丢步」痛点句 |
+| 课仓对照 | 9.5/10 | Worker lease vs Session 写租约边界清楚 |
+| **总分** | **9.3/10** | 写租约题过关偏强 |
+
+**缺口**：可补一句「进程崩溃不 release → 等 TTL」运维窗口。
+
 
 ---
 
@@ -81,7 +110,27 @@
 
 #### 候选人解答（agent学生）
 
-（待答）
+**1) 任务审批链**
+
+- 策略：`IApprovalPolicyService.decide(profileCode, permissionAssessment)`（策略来自 `IApprovalPolicyPort` / `ApprovalPolicyVO.approvalRequiredProfiles`）
+- 挂起：会话 `HarnessStatusEnumVO.PENDING_APPROVAL`
+- 放行：`ApprovalCommandService.approve(sessionId)` 校验状态 → `QUEUED` → `sessionLogService.recordApprovalAccepted` → `harnessExecutionService.executeSession`
+- API：`IHarnessApproval*`（与运行期 `IRuntimeApprovalApi` 分立）
+
+**2) 运行期工具审批链**
+
+发生在 `ToolCallExecutor` 内：`MatrixRuntimeApprovalGate.check`；需 ask 时 `RuntimeApprovalBroker.requestApproval` 阻塞，REST `resolve` 唤醒。  
+**任务已 QUEUED/执行中 ≠** 某条 `shell_*` 已 `allowForSession`。
+
+**3) 状态机不共用**
+
+任务态（PENDING_APPROVAL / QUEUED / …）≠ Broker pending map 的 `approvalId`。  
+混用事故：任务批过后跳过工具 Gate → shell 裸奔；工具 DENY 却标任务完成 → 假成功；把流程引擎节点 ID 当成 Broker approvalId → 串台。
+
+**4) 能否统一 Flowable？**
+
+企业单据流适合 Flowable/`geek-flow`；dsh-java 价值是 Harness 内工具级挂起（Gate + Broker）。可演进为「任务级流程引擎 + 工具级仍 Gate」，但**本仓库未收成单一 BPMN**——面试诚实分层，不硬吹已全上 Flowable。
+
 
 #### 面试官标准答（Java高级架构师 · 金标）
 
@@ -113,7 +162,16 @@
 
 #### 评分
 
-（待答后回填）
+| 维度 | 分 | 评语 |
+|------|----|------|
+| 任务链 | 9.5/10 | decide → PENDING → approve → QUEUED → record → execute 完整 |
+| 工具链 | 9.5/10 | Gate + Broker；任务批≠工具放行 |
+| 混用事故 | 9.5/10 | 裸奔 / 假完成 / ID 串台三点齐 |
+| Flowable 边界 | 9/10 | 诚实分层；可再点「毫秒～分钟工具挂起」为何不宜整段 BPMN |
+| **总分** | **9.3/10** | 联调故事过关偏强 |
+
+**缺口**：点名 `FULL_OPEN`/`AUTO_APPROVE` 会让第二道门失效（接 R4 O9 漏句）。
+
 
 ---
 
@@ -125,4 +183,6 @@
 
 ## 状态
 
-- R5-C / R5-D：题面 + 金标已写入；**待 agent学生作答**  
+- R5-C：已完成（9.3）  
+- R5-D：已完成（9.3）  
+- R5 架构段收束  
