@@ -150,7 +150,9 @@
 
 #### 候选人解答（agent学生）
 
-_（待填）_
+1. 课仓 `internalToolExecutionEnabled(true)`=框架内置执行，旁路 `AgentLoopExecutor`/`ToolCallExecutor`；正确配置一律 `false`（ReactAgent/LlmInvoker/各 ReactAgent）。
+2. dsh：`FULL_OPEN`→ALLOW；`askHandler=null`→矩阵内 DENY；Gate 未注入/`setApprovalGate(null)`→allowAll 裸奔；`hookService=null`→PRE 跳过。唯一入口 ≠ 默认安全。
+3. 生产默认 DENY/显式装配；课仓演示友好 ALLOW——面试主动划开，不上生产。
 
 #### 面试官标准答（Agent工程师 · 金标）
 
@@ -160,7 +162,27 @@ _（待填）_
 
 #### 评分
 
-_（答后填）_
+| 维度 | 分 | 评语 |
+|------|----|------|
+| 课仓旁路 | 9/10 | internalToolExecutionEnabled 点名正确 |
+| Gate 伪安全 | 9.5/10 | FULL_OPEN / null Gate / null Hook 三条都齐 |
+| 默认失败主张 | 9/10 | 生产 DENY vs 课仓 ALLOW 划界清楚 |
+| **总分** | **9.0/10** | 痛点补考过关 |
+
+---
+
+## R5 深挖小结
+
+| 题 | 分 |
+|----|----|
+| Q1 Loop 对比 | 8.7 |
+| Q2 缺 TOOL_RESULT | 9.1 |
+| Q3 默认失败 | 9.0 |
+| **均分** | **8.9** |
+
+**学生作业（24h）**：把本场漏句（旁路开关、null Gate 裸奔、合成 RESULT、先 cancel 再 unload）补进 `round-04-review-and-next.md` 附录或新建 `round-05-review-and-next.md`。
+
+**R6 预告（Agent工程师）**：MCP `mcp__` 工具描述投毒 vs `plugin__` ClassLoader 隔离——谁改描述、谁校验 schema hash、投毒后如何在 PRE/审批挡住。题面下一 PR 出。
 
 ---
 
@@ -168,5 +190,6 @@ _（答后填）_
 
 - R5-Q1：已完成（8.7）
 - R5-Q2：已完成（9.1）
-- R5-Q3：已出题 + 金标；**待答**（补 Q1 旁路/默认失败）  
+- R5-Q3：已完成（9.0）
+- R5 深挖段收束（均分 8.9）；待学生复盘；R6 MCP 投毒预告  
 - 架构延伸（R5-C/D）仍可由 Java高级架构师另开，不阻塞本场深挖  
