@@ -46,4 +46,33 @@
 ## 状态
 
 - R6-Q1：已完成（9.2）
-- 下一题：可开 R6-Q2（指纹落库/漂移告警）或交架构侧续挖
+- R6-Q2：题面+金标已出；**待答**
+
+---
+
+## R6-Q2 · 指纹落库 + 漂移告警 + 同名换皮
+
+### 提问（Agent工程师）
+
+> 假设你要给 dsh-java **补上** Q1 里承认缺失的 fingerprint（对照课仓 A5 思路，但落到 dsh 类名）：
+> 1. **落库**：指纹算什么字段（name / description / inputSchema / 服务端 URI）？存在哪（内存 Registry 旁路表 / DB / 配置 allowlist）？注册与 `tools/list` 刷新时谁写入？
+> 2. **漂移告警**：运行中 list 刷新发现同名工具 hash 变了，控制面如何反应（拒绝注册 / 告警+只读旧版 / 直接 DENY 调用）？日志/指标叫什么名字你怎么设计？
+> 3. **同名换皮检测**：攻击者保持 `mcp__mail__send` 名字不变，只改 description 诱导模型、或改 schema 增加 `to_account`——PRE/审批矩阵如何在**不信任名字**的前提下拦住？给出判定伪代码级步骤。
+> 4. **与事件成对**：若漂移检测在已 `TOOL_CALL` 之后才发现，如何保证仍写出合成 `TOOL_RESULT`（错误码建议）且不默默重放副作用？
+>
+> 必须区分「已有 A5」与「dsh 应补」；禁止假装 dsh 已经有指纹表。
+
+### 候选人解答
+
+_（待填）_
+
+### 金标（Agent工程师）
+
+1. **落库**：fingerprint = `H(canonicalName + description + canonicalJsonSchema + serverId)`（或分离 descriptionHash/schemaHash）。存 `ToolFingerprintStore`（启动 allowlist + 运行时表）；`McpToolAdapter`/`ToolRegistry.register` 时写入；`tools/list` 增量须走同一写入路径，禁止静默覆盖。
+2. **漂移**：同名不同 hash → **拒绝覆盖注册** + metric `tool_fingerprint_drift_total{tool,server}` + 审计日志；可选：钉住旧指纹，新版本进 `pending_review`。默认**不**自动切新皮。
+3. **换皮**：调用前 PRE：`lookup(name)` → 重算 hash → 与 store 比较；不等则 `Decision.DENY`（原因 `FINGERPRINT_DRIFT`），**不看**模型是否喜欢新 description。审批矩阵 key 建议 `(qualifiedName, fingerprint)`，仅 name 放行不够。
+4. **成对**：若 CALL 已写入：DENY/漂移路径必须 `appendToolResult(callId, error=FINGERPRINT_DRIFT|ABORTED)`；闸新 turn；副作用工具禁止自动重放。
+
+### 评分
+
+_（答后填）_
