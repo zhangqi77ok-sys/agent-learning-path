@@ -47,7 +47,37 @@
 
 - R6-Q1：已完成（9.2）
 - R6-Q2：已完成（**9.4**）
-- R6 均分暂估：(9.2+9.4)/2=**9.3**；可续 Q3（Store 并发/多实例一致性）或复盘入库
+- R6-Q3：题面+金标已出；**待答**
+- R6 均分暂估：(9.2+9.4)/2=**9.3**（Q3 后重算）
+
+---
+
+## R6-Q3 · FingerprintStore 多实例一致性 + 滚动换皮
+
+### 提问（Agent工程师）
+
+> 生产两台 dsh 实例 A/B 共连同一 MCP；运维滚动发布「邮件工具」新 schema。
+> 1. **共享真相**：FingerprintStore 放本地内存行不行？若用 DB/Redis，key/value/版本字段怎么设计？谁有权 `approve` 新指纹？
+> 2. **并发**：A 已批准 fp1，B 同时 list 到 fp2；两边 PRE 会怎样？如何避免「A 放行、B 拒」导致同会话分裂？
+> 3. **滚动换皮**：要求零双发副作用——发布窗口内旧 CALL 未闭合时，新指纹能否生效？给出状态机：`active`/`pending_review`/`retired` + 与 cancel/合成 RESULT 的先后。
+> 4. **脑裂**：Store 短暂读到旧快照，PRE 误放行新皮参数——如何用 epoch/fencing token 或「调用时带 fp」把洞堵上？
+>
+> 结合 dsh 多实例现实讲；不要只背「用分布式锁」。
+
+### 候选人解答
+
+_（待填）_
+
+### 金标（Agent工程师）
+
+1. **共享**：内存-only 不够。Store=`(serverId, qualifiedName) → {fp, status, epoch, approvedBy, approvedAt}` 落 DB/Redis；**人工/变更单**才把 `pending_review→active`，进程不能因 list 自批准。
+2. **并发**：PRE 读**共享 Store 的 active fp**；会话粘住 `call.fp`；同 session 内不允许中途改 active 影响已发出 CALL。实例间靠共享 Store，不靠本地缓存无版本。
+3. **滚动**：`pending_review` 不可被 PRE 命中；有 in-flight CALL 时禁止 `active` 切换（或仅允许 retire 旧皮）；先 cancel/合成 RESULT 闭合 → 再 `active=fp2`、`retired=fp1`。
+4. **脑裂**：TOOL_CALL 事件写入 `fp`；执行前二次校验 `call.fp == store.active || call.fp == store.approved_for_call`；epoch 单调递增，执行器持有 epoch，落后则 DENY+合成 RESULT，不执行副作用。
+
+### 评分
+
+_（答后填）_
 
 ---
 

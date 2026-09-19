@@ -22,5 +22,5 @@
 | R4 复盘 | 2026-09-19 | 缺口 / P0–P2 补学 / 建议 R5 题单 | [round-04-review-and-next.md](round-04-review-and-next.md) | **已合** |
 | R5 深挖 | 2026-09-19 | Loop 对比 + 缺 TOOL_RESULT 排障（A/B） | [round-05-loop-compare-and-trace.md](round-05-loop-compare-and-trace.md) | **深挖段完成**（均分 8.9；复盘附录已代写；R6-Q1 9.2） |
 | R5 架构 | 2026-09-19 | 写租约冲突 + 两类审批联调（C/D） | [round-05-arch-lease-and-approvals.md](round-05-arch-lease-and-approvals.md) | **已完成**（C 9.3 · D 9.3） |
-| R6 | 2026-09-19 | MCP 投毒 vs plugin 隔离 | [round-06-mcp-poison-and-plugin-isolation.md](round-06-mcp-poison-and-plugin-isolation.md) | **进行中**（Q1 9.2 · Q2 9.4；可续 Q3） |
+| R6 | 2026-09-19 | MCP 投毒 vs plugin 隔离 | [round-06-mcp-poison-and-plugin-isolation.md](round-06-mcp-poison-and-plugin-isolation.md) | **进行中**（Q1 9.2 · Q2 9.4；Q3 待答） |
 | Trace 旁注 | — | 定层 + 缺 filter 硬否决 | [trace-interview-notes.md](trace-interview-notes.md) | **已合** |
