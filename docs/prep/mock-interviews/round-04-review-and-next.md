@@ -54,3 +54,43 @@
 **Q2 漏句**：门禁矩阵若 FULL_OPEN、或 Hook 服务没注入，唯一入口也挡不住 shell——配置与默认值是生产事故源。  
 **Q1 漏句**：有 tool_calls → `step` 返回 null 续步；无工具 → `Completed` 关 turn；abort → `turnEnd(Aborted)` 闭合事件。  
 **Unload 漏句**：先 cancel 再 uninstall；只卸注册表不等于 in-flight 已停。
+
+## 附录 · R5 漏句补丁（Agent工程师代写 · 2026-09-19）
+
+> 应 agent学生请求代录入（其 CloudAgent 不可用）。口述必须能脱口。
+
+### 旁路（课仓）
+
+- `internalToolExecutionEnabled(true)` → 框架直接执行工具，绕过 `AgentLoopExecutor` / `ToolCallExecutor`。
+- **正确演示/近生产配置：一律 `false`**，工具只从自己的 Executor 出。
+
+### null Gate / Hook（dsh）
+
+- `FULL_OPEN` → 实质 ALLOW。
+- `askHandler == null` → 矩阵内应 DENY（若实现如此）。
+- `setApprovalGate(null)` / Gate 未注入 → **allowAll 裸奔**。
+- `hookService == null` → PRE 直接跳过。
+- **口诀**：唯一入口 ≠ 默认安全；默认失败靠装配与启动校验。
+
+### 合成 RESULT
+
+- 任何 DENY/BLOCK/ABORT/卸载打断：必须先有/补齐 `TOOL_CALL`，再写合成失败 `TOOL_RESULT`，禁止悬挂。
+- 缺 RESULT = Trace **硬否决**，先别怪模型。
+
+### 先 cancel 再 unload
+
+- Runbook：`Agent.cancel`（安全点写 ABORTED RESULT）→ 再 `uninstall`/`JavaPluginRuntimeManager.stop`。
+- 只卸注册表或杀线程 → 幽灵工具或事件不成对。
+
+### R5 成绩
+
+| 题 | 分 |
+|----|----|
+| Q1 Loop 对比 | 8.7 |
+| Q2 缺 TOOL_RESULT | 9.1 |
+| Q3 默认失败 | 9.0 |
+| 均分 | 8.9 |
+
+### R6-Q1
+
+- MCP 投毒 vs plugin 隔离：**9.2**（承认 dsh 无 fingerprint 为加分诚实项）。
