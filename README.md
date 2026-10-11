@@ -55,7 +55,7 @@ done
 | [B1](04-frontier/B1-durable-runtime/) | Durable Runtime（Temporal） | Workflow / Activity / Signal 分工；Activity 幂等。**需装 `temporalio`** |
 | [B2](04-frontier/B2-a2a/) | 最小 A2A | Agent 间委托：下行身份、幂等键、超时与取消 |
 
-设计取舍与对照关系见 [`docs/curriculum.md`](docs/curriculum.md)，能力维度拆解见 [`docs/capability-matrix.md`](docs/capability-matrix.md)。
+设计取舍与对照关系见 [`docs/curriculum.md`](docs/curriculum.md)，能力维度拆解见 [`docs/capability-matrix.md`](docs/capability-matrix.md)，20大核心痛难点深度攻坚见 [`docs/production-agent-20-deep-dive.md`](docs/production-agent-20-deep-dive.md)。
 
 ---
 
